@@ -41,3 +41,20 @@ def _strip_comments(json_text: str) -> str:
                     i += 1
         i += 1
     return result
+
+# import sys
+
+# if __name__ == "__main__":
+#     # On vérifie qu'un fichier a bien été passé en argument
+#     if len(sys.argv) < 2:
+#         print("Utilisation : python settings.py <fichier.json>")
+#         sys.exit(1)
+
+#     # Le bloc 'with' ferme le fichier tout seul à la fin
+#     with open(sys.argv[1], "r", encoding="utf-8") as file:
+#         texte_brut = file.read() # <-- ICI on transforme l'objet fichier en texte
+        
+#     resultat_propre = _strip_comments(texte_brut)
+    
+#     # Le print est ici, bien séparé de la logique de la fonction
+#     print(resultat_propre)
