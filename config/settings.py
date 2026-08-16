@@ -1,60 +1,115 @@
+import copy
+import json
+import sys
+from pathlib import Path
+
 STATE_NORMAL = 0
 STATE_STRING = 1
-STATE_COMMENT = 2
+STATE_LINE_COMMENT = 2
+STATE_BLOCK_COMMENT = 3
+
+DEFAULT_CONFIG = {
+    "highscore_filename": "highscore.json",
+    "levels": [{"width": 21, "height": 21}],
+    "lives": 3,
+    "pacgum": 42,
+    "points_per_pacgum": 10,
+    "points_per_super_pacgum": 50,
+    "points_per_ghost": 200,
+    "seed": 42,
+    "level_max_time": 90
+}
 
 def _strip_comments(json_text: str) -> str:
-    """
-    Prend le texte brut du fichier, supprime les commentaires #, // et /* */
-    et retourne du texte JSON propre prêt à être lu par Python.
-    """
-
-    result = ""
-    actual_state = STATE_NORMAL
+    result = []
+    state = STATE_NORMAL
     i = 0
 
     while i < len(json_text):
+        char = json_text[i]
 
-        if actual_state == STATE_NORMAL:
-            if json_text[i] == '"':
-                actual_state = STATE_STRING
-            elif json_text[i] == '#':
-                actual_state = STATE_COMMENT
-            elif json_text[i] == '/':
-                if json_text[i + 1] == '/' or json_text[i + 1] == "*":
-                    actual_state = STATE_COMMENT
-            else:
-                result += json_text[i]
+        if state == STATE_NORMAL:
+            if char == '"':
+                state = STATE_STRING
+                result.append(char)
 
-        elif actual_state == STATE_STRING:
-            if json_text[i] == '"':
-                actual_state = STATE_NORMAL
-            else:
-                result += json_text[i]
+            elif char == '#':
+                state = STATE_LINE_COMMENT
 
-        elif actual_state == STATE_COMMENT:
-            if json_text[i] == "\n":
-                actual_state = STATE_NORMAL
-                result += json_text[i]
-            elif json_text[i] == "*":
-                if json_text[i + 1] == "/":
-                    actual_state = STATE_NORMAL
+            elif char == '/' and i + 1 < len(json_text):
+                if json_text[i + 1] == '/':
+                    state = STATE_LINE_COMMENT
                     i += 1
-        i += 1
-    return result
 
-# import sys
+                elif json_text[i + 1] == '*':
+                    state = STATE_BLOCK_COMMENT
+                    i += 1
+
+                else:
+                    result.append(char)
+
+            else:
+                result.append(char)
+
+        elif state == STATE_STRING:
+            result.append(char)
+
+            if char == '"' and (i == 0 or json_text[i - 1] != '\\'):
+                state = STATE_NORMAL
+
+        elif state == STATE_LINE_COMMENT:
+            if char == '\n':
+                state = STATE_NORMAL
+
+
+        elif state == STATE_BLOCK_COMMENT:
+            if char == '*' and i + 1 < len(json_text):
+                if json_text[i + 1] == '/':
+                    state = STATE_NORMAL
+                    i += 1
+
+        i += 1
+
+    return ''.join(result)
+
+def load_config(filepath: str) -> dict:
+    try:
+        config_file = Path(filepath).read_text(encoding="utf-8")
+        strip_config = _strip_comments(config_file)
+        data = json.loads(strip_config)
+    except Exception as e:
+        print(f"Configuration Error: {e}. Default values will be used", file=sys.stderr)
+        return DEFAULT_CONFIG.copy()
+    
+    final_config = copy.deepcopy(DEFAULT_CONFIG)
+
+    for key, value in data.items():
+        if key not in DEFAULT_CONFIG:
+            continue
+        
+        attended_type = type(DEFAULT_CONFIG[key])
+        data_type = type(value)
+
+        if attended_type == data_type:
+            final_config[key] = value
+        else:
+            print(f"Warning: key '{key}' has type {data_type.__name__}, "
+                  f"expected {attended_type.__name__}. "
+                  f"Default value will be used.", file=sys.stderr)
+        
+    return final_config
+
 
 # if __name__ == "__main__":
-#     # On vérifie qu'un fichier a bien été passé en argument
+#     # On vérifie qu'un fichier a été passé en argument
 #     if len(sys.argv) < 2:
 #         print("Utilisation : python settings.py <fichier.json>")
 #         sys.exit(1)
 
-#     # Le bloc 'with' ferme le fichier tout seul à la fin
-#     with open(sys.argv[1], "r", encoding="utf-8") as file:
-#         texte_brut = file.read() # <-- ICI on transforme l'objet fichier en texte
-        
-#     resultat_propre = _strip_comments(texte_brut)
+#     print("--- CHARGEMENT DE LA CONFIG ---")
+#     config = load_config(sys.argv[1])
     
-#     # Le print est ici, bien séparé de la logique de la fonction
-#     print(resultat_propre)
+#     print("\n--- RÉSULTAT FINAL ---")
+#     # Le 'import json' sert ici à afficher le dictionnaire joliment (avec l'indentation)
+#     print(json.dumps(config, indent=4))
+
