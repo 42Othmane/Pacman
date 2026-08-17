@@ -7,17 +7,17 @@ class CollectibleManager:
         maze_grid: La grille du labyrinthe (0 = couloir, 1 = mur)
         pacgum_count: Le nombre de pacgums à placer (vient de la config)
         """
-        self.grid = [[0 for _ in range(len(maze_grid[0]))] for _ in range(len(maze_grid))]  # La grille d'état des collectibles
+        self.grid = [[0 for _ in range(len(maze_grid[0]))] for _ in range(len(maze_grid))]
         self.total_pacgums = 0
         self.pacgums_eaten = 0
 
-        h = len(maze_grid)  # Hauteur (Y)
-        w = len(maze_grid[0]) # Largeur (X)
+        h = len(maze_grid)
+        w = len(maze_grid[0])
 
-        self.grid[0][0] = 2               # Haut Gauche
-        self.grid[0][w - 1] = 2           # Haut Droite
-        self.grid[h - 1][0] = 2           # Bas Gauche
-        self.grid[h - 1][w - 1] = 2       # Bas Droite
+        self.grid[0][0] = 2
+        self.grid[0][w - 1] = 2
+        self.grid[h - 1][0] = 2
+        self.grid[h - 1][w - 1] = 2
 
         empty_cells = []
         for y in range(h):
