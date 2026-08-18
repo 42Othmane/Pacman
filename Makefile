@@ -2,7 +2,7 @@ PYTHON      := python3
 PIP         := $(PYTHON) -m pip
 VENV        := .venv
 CONFIG      ?= config/config.json
-MAIN        := src/pacman/main.py
+MAIN        := main.py
 
 .PHONY: install run debug clean lint lint-strict
 

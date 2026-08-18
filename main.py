@@ -1,9 +1,9 @@
 """Entry point: python3 src/pacman/main.py config.json"""
 import sys
-from typing import NoReturn
+from ui.render_loop import RenderLoop, build_render_loop
 
 
-def main() -> NoReturn:
+def main() -> None:
     """Parse CLI args, load config, and start the game loop.
 
     Raises:
@@ -12,9 +12,8 @@ def main() -> NoReturn:
     if len(sys.argv) != 2:
         print("Usage: python3 main.py <config.json>", file=sys.stderr)
         raise SystemExit(1)
-
-    # TODO(person-A): load_config(sys.argv[1]) -> GameConfig
-    # TODO(person-B): init graphics window, then run Menu -> Game loop
+    loop = build_render_loop(800,600)
+    loop.run()
 
     raise SystemExit(0)
 
