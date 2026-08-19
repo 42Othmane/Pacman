@@ -57,6 +57,7 @@ def _ensure_min_levels(levels: list) -> list:
 
     return result
 
+
 def _clamp(key: str, value: int) -> int:
     """Ramène value dans les bornes définies pour key."""
     if key not in BOUNDS:
@@ -170,7 +171,9 @@ def _strip_comments(json_text: str) -> str:
 def load_config(filepath: str) -> dict:
     if Path(filepath).suffix.lower() != ".json":
         print("File type must be .JSON", file=sys.stderr)
-        return copy.deepcopy(DEFAULT_CONFIG)
+        defaults = copy.deepcopy(DEFAULT_CONFIG)
+        defaults["levels"] = _ensure_min_levels(defaults["levels"])
+        return defaults
     try:
         config_file = Path(filepath).read_text(encoding="utf-8")
         strip_config = _strip_comments(config_file)
@@ -178,7 +181,16 @@ def load_config(filepath: str) -> dict:
     except Exception as e:
         print(
             f"Configuration Error: {e}. Default values will be used", file=sys.stderr)
-        return copy.deepcopy(DEFAULT_CONFIG)
+        defaults = copy.deepcopy(DEFAULT_CONFIG)
+        defaults["levels"] = _ensure_min_levels(defaults["levels"])
+        return defaults
+
+    if not isinstance(data, dict):
+        print("Configuration Error: root must be a JSON object. "
+              "Default values will be used", file=sys.stderr)
+        defaults = copy.deepcopy(DEFAULT_CONFIG)
+        defaults["levels"] = _ensure_min_levels(defaults["levels"])
+        return defaults
 
     final_config = copy.deepcopy(DEFAULT_CONFIG)
 
