@@ -33,5 +33,11 @@ def generate_level(level_number: int, width: int, height: int, base_seed: int) -
         maze = MazeGenerator(size=(width, height), perfect=False, seed=seed)
         return translate_maze(maze)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return []
+        print(f"[Maze Adapter] Level {level_number} generation failed: {e}. Falling back to safe empty grid.", file=sys.stderr)
+        width = max(width, 5)
+        height = max(height, 5)
+        safe_grid = [[1 if x == 0 or x == width - 1 or y == 0 or y == height - 1 else 0 
+                      for x in range(width)] 
+                     for y in range(height)]
+        return safe_grid
+
