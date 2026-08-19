@@ -23,6 +23,9 @@ from ui.screens.base import Screen, ScreenName
 from ui.screens.menu_screen import MenuScreen
 from ui.screens.highscores_screen import HighscoresScreen
 from ui.screens.instructions_screen import InstructionsScreen
+from ui.screens.pause_screen import PauseScreen
+from ui.screens.game_over_screen import GameOverScreen
+from ui.screens.victory_screen import VictoryScreen
 
 FPS = 60
 WINDOW_TITLE = "Pac-Man"
@@ -50,6 +53,7 @@ class RenderLoop:
         # Screen management
         self.screens: Dict[ScreenName, Screen] = {}
         self.current_screen: Optional[ScreenName] = None
+        self.playing_screen_backup: Optional[Screen] = None
         
         # Initialize all screens
         self._init_screens()
@@ -62,15 +66,23 @@ class RenderLoop:
         # Menu screen
         self.screens[ScreenName.MENU] = MenuScreen()
         
-        # Highscores screen (empty for now, will be populated later)
+        # Highscores screen
         self.screens[ScreenName.HIGHSCORES] = HighscoresScreen([])
         
         # Instructions screen
         self.screens[ScreenName.INSTRUCTIONS] = InstructionsScreen()
         
+        # Pause sceen
+        self.screens[ScreenName.PAUSED] = PauseScreen()
+
+        # Game Over screen
+        self.screens[ScreenName.GAME_OVER] = GameOverScreen(0)
+
+        # Victory screen
+        self.screens[ScreenName.VICTORY] = VictoryScreen(0)
+
         # TODO: Add other screens as they are implemented
         # self.screens[ScreenName.PLAYING] = PlayingScreen()
-        # self.screens[ScreenName.PAUSED] = PauseScreen()
         # self.screens[ScreenName.GAME_OVER] = GameOverScreen()
         # self.screens[ScreenName.VICTORY] = VictoryScreen()
 
@@ -79,6 +91,18 @@ class RenderLoop:
         if screen_name == ScreenName.EXIT:
             self.running = False
             return
+        
+        if screen_name == ScreenName.PAUSED and self.current_screen == ScreenName.PLAYING:
+            self.playing_screen_backup = self.screens.get(ScreenName.PLAYING)
+        
+        if self.current_screen == ScreenName.PAUSED and screen_name == ScreenName.PLAYING:
+            if self.playing_screen_backup:
+                self.screens[ScreenName.PLAYING] = self.playing_screen_backup
+
+        if screen_name == ScreenName.GAME_OVER:
+            self.screens[ScreenName.GAME_OVER] = GameOverScreen(1234)
+        elif screen_name == ScreenName.VICTORY:
+            self.screens[ScreenName.VICTORY] = VictoryScreen(5678)
             
         if screen_name in self.screens:
             self.current_screen = screen_name
@@ -124,13 +148,21 @@ class RenderLoop:
 
     def draw(self) -> None:
         """Clear the screen and redraw the current frame."""
-        self.screen.fill(COLOR_BACKGROUND)
-        
-        # Draw current screen
-        if self.current_screen:
-            screen = self.screens.get(self.current_screen)
-            if screen:
-                screen.draw(self.screen)
+        if self.current_screen == ScreenName.PAUSED and self.playing_screen_backup:
+            # Dessiner le jeu figé
+            self.screen.fill(COLOR_BACKGROUND)
+            self.playing_screen_backup.draw(self.screen)
+            # Puis dessiner l'overlay de pause par-dessus
+            pause_screen = self.screens.get(ScreenName.PAUSED)
+            if pause_screen:
+                pause_screen.draw(self.screen)
+        else:
+            # Comportement normal
+            self.screen.fill(COLOR_BACKGROUND)
+            if self.current_screen:
+                screen = self.screens.get(self.current_screen)
+                if screen:
+                    screen.draw(self.screen)
         
         pygame.display.flip()
 

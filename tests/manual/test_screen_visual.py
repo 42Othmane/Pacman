@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from ui.screens.highscores_screen import HighscoresScreen  # noqa: E402
 from ui.screens.instructions_screen import InstructionsScreen  # noqa: E402
 from ui.screens.menu_screen import MenuScreen
+from ui.screens.pause_screen import PauseScreen
 
 WINDOW_WIDTH = 630
 WINDOW_HEIGHT = 760
@@ -42,6 +43,8 @@ def build_screen(name: str):
         return InstructionsScreen()
     if name == "menu":
         return MenuScreen()
+    if name == "pause":
+        return PauseScreen()
     raise ValueError(f"Unknown screen: {name!r} (use 'highscores' or 'instructions')")
 
 

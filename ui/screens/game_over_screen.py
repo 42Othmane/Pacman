@@ -1,38 +1,20 @@
-"""Game over screen (spec 6.7-6.8).
+"""Game Over screen (spec 6.8).
 
-Displays the final score and prompts the player to enter their name to
-save it in the highscore list.
+Displays final score and prompts player to enter name for highscore.
 """
-from typing import Optional
+from ui.screens.score_entry_screen import ScoreEntryScreen
 
-import pygame
-
-from ui.screens.base import Screen, ScreenName
-
-
-class GameOverScreen(Screen):
-    """Shown when the player runs out of lives."""
+class GameOverScreen(ScoreEntryScreen):
+    """Game Over screen with score entry."""
 
     def __init__(self, final_score: int) -> None:
-        """Store the final score and prepare the name-entry input.
+        """Initialize the Game Over screen.
 
         Args:
-            final_score: The player's score when the run ended.
+            final_score: The player's final score.
         """
-        # TODO: init a text-input state for the player name
-        # (max 10 chars, alphanumeric + spaces only — see spec 5.5).
-        raise NotImplementedError
-
-    def handle_event(self, event: pygame.event.Event) -> None:
-        """Handle text input for the player name and confirmation key."""
-        raise NotImplementedError
-
-    def update(self, dt: float) -> Optional[ScreenName]:
-        """Save the highscore (via Lot A's module) and return MENU once
-        the name is confirmed, else None.
-        """
-        raise NotImplementedError
-
-    def draw(self, surface: pygame.Surface) -> None:
-        """Draw the final score and the name-entry prompt."""
-        raise NotImplementedError
+        super().__init__(
+            final_score=final_score,
+            title="GAME OVER",
+            title_color=(255, 0, 0)  # Rouge
+        )

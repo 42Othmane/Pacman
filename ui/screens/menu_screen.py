@@ -46,7 +46,7 @@ class MenuScreen(Screen):
         """Return PLAYING when Start is chosen, else stay on MENU."""
         if self.selected_option == "Start Game":
             self.selected_option = None
-            return ScreenName.PLAYING
+            return ScreenName.PAUSED
         elif self.selected_option == "Highscores":
             self.selected_option = None
             return ScreenName.HIGHSCORES
