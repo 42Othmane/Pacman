@@ -1,0 +1,88 @@
+"""Chargement d'un labyrinthe depuis le package A-Maze-ing.
+
+Convention : grid[y][x], y = ligne (0 en haut), x = colonne.
+Ce module est la seule frontière avec le package externe : le reste
+du jeu ne manipule que des objets Maze et Cell.
+"""
+
+import sys
+
+from mazegenerator import MazeGenerator
+
+from cell import Cell
+
+
+class Maze:
+    """Un labyrinthe prêt à jouer : grille, spawn et coins."""
+
+    def __init__(self, grid: list[list[Cell]]) -> None:
+        self.grid = grid
+        self.height = len(grid)
+        self.width = len(grid[0])
+        self.spawn: tuple[int, int] = _find_spawn(grid)
+        self.corners: list[tuple[int, int]] = _find_corners(
+            self.height, self.width)
+
+    def cell_at(self, y: int, x: int) -> Cell | None:
+        """Case en (y, x), ou None si hors grille."""
+        if self.in_bounds(y, x):
+            return self.grid[y][x]
+        else:
+            return None
+
+    def in_bounds(self, y: int, x: int) -> bool:
+        """True si (y, x) est dans la grille."""
+        return 0 <= y < self.height and 0 <= x < self.width
+
+
+def _find_corners(height: int, width: int) -> list[tuple[int, int]]:
+    """Les 4 coins de la grille, en (y, x)."""
+    return [
+        (0, 0),
+        (0, width - 1),
+        (height - 1, 0),
+        (height - 1, width - 1),
+    ]
+
+
+def _find_spawn(grid: list[list[Cell]]) -> tuple[int, int]:
+    """Case jouable la plus proche du centre, en (y, x).
+
+    Le motif '42' occupe le centre avec des cases isolées : on cherche
+    donc la case non isolée qui minimise la distance de Manhattan
+    au centre géométrique.
+    """
+    ...
+
+
+def _to_grid(raw: list[list[int]]) -> list[list[Cell]]:
+    """Convertit la grille d'entiers A-Maze-ing en grille de Cell."""
+    return [[Cell.from_bitmask(v) for v in row] for row in raw]
+
+
+def _is_valid_raw(raw: object) -> bool:
+    """True si la sortie du générateur est exploitable."""
+    if not isinstance(raw, list) or not raw:
+        return False
+    for row in raw:
+        if 
+
+
+def load_maze(width: int, height: int, seed: int = 0) -> Maze | None:
+    """Génère un labyrinthe via A-Maze-ing.
+
+    seed > 0 : génération déterministe (niveau 1).
+    seed <= 0 : génération aléatoire (niveaux suivants).
+    Retourne None si la génération échoue.
+    """
+    try:
+        generator = MazeGenerator(
+            size=(width, height),
+            perfect=False,
+            seed=seed,
+        )
+    except Exception as e:
+        print(f"Maze generation failed: {e}", file=sys.stderr)
+        return None
+
+    ...
