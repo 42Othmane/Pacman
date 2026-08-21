@@ -52,8 +52,26 @@ def _find_spawn(grid: list[list[Cell]]) -> tuple[int, int]:
     donc la case non isolée qui minimise la distance de Manhattan
     au centre géométrique.
     """
-    ...
 
+    height = len(grid)
+    width = len(grid[0])
+
+    center_y = height // 2
+    center_x = width // 2
+
+    best = (center_y, center_x)
+    best_dist = float("inf")
+
+    for y in range(height):
+        for x in range(width):
+            if grid[y][x].is_isolated:
+                continue
+            dist = abs(y - center_y) + abs(x - center_x)
+            if dist < best_dist:
+                best_dist = dist
+                best = (y, x)
+    
+    return best
 
 def _to_grid(raw: list[list[int]]) -> list[list[Cell]]:
     """Convertit la grille d'entiers A-Maze-ing en grille de Cell."""
@@ -64,8 +82,16 @@ def _is_valid_raw(raw: object) -> bool:
     """True si la sortie du générateur est exploitable."""
     if not isinstance(raw, list) or not raw:
         return False
+    expected = len(raw[0])
     for row in raw:
-        if 
+        if not isinstance(row, list) or not row:
+            return False
+        elif len(row) != expected:
+            return False
+        for value in row:
+            if type(value) is not int:
+                return False
+    return True 
 
 
 def load_maze(width: int, height: int, seed: int = 0) -> Maze | None:
@@ -81,8 +107,20 @@ def load_maze(width: int, height: int, seed: int = 0) -> Maze | None:
             perfect=False,
             seed=seed,
         )
+
+        raw = generator.maze
+        path = generator.shortest_path
+
     except Exception as e:
-        print(f"Maze generation failed: {e}", file=sys.stderr)
+        print(f"Maze access failed: {e}", file=sys.stderr)
         return None
 
-    ...
+    if not _is_valid_raw(raw):
+        print("Maze generation returned an invalid grid",
+               file=sys.stderr)
+        return None
+    elif path is False:
+        print("Maze has no path from entry to exit", file=sys.stderr)
+        return None
+    
+    return Maze(_to_grid(raw))

@@ -55,12 +55,12 @@ class Cell:
     @property
     def has_super_pacgum(self) -> bool:
         return self.content == SUPER_PACGUM
+        
     @property
     def has_gum(self) -> bool:
         """True si la case contient un collectible, quel qu'il soit."""
         return self.content != EMPTY
     
-    @property
     def take_gum(self) -> int:
         """Vide la case et renvoie ce qui s'y trouvait (EMPTY si rien)."""
         eaten = self.content
