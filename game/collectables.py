@@ -1,58 +1,88 @@
+"""Placement et consommation des pacgums dans le labyrinthe.
+
+Convention : coordonnées en (y, x), y = ligne, x = colonne.
+Les collectibles sont stockés dans les Cell du labyrinthe ; ce
+manager ne fait que les placer et compter ce qui a été mangé.
+"""
+
 import random
+
+from cell import EMPTY, PACGUM, SUPER_PACGUM
+from loader import Maze
 
 
 class CollectibleManager:
-    def __init__(self, maze_grid: list, pacgum_count: int):
+    """Place les pacgums dans le labyrinthe et suit leur consommation."""
+
+    def __init__(self, maze: Maze, pacgum_count: int) -> None:
+        """maze : labyrinthe à peupler.
+
+        pacgum_count : nombre de pacgums simples souhaité (config).
         """
-        maze_grid: La grille du labyrinthe (0 = couloir, 1 = mur)
-        pacgum_count: Le nombre de pacgums à placer (vient de la config)
-        """
-        self.grid = [[0 for _ in range(len(maze_grid[0]))] for _ in range(len(maze_grid))]
-        self.total_pacgums = 0
+        self.maze = maze
         self.pacgums_eaten = 0
+        self.total_pacgums = 0
 
-        h = len(maze_grid)
-        w = len(maze_grid[0])
+        supers = self._place_super_pacgums()
+        simples = self._place_pacgums(pacgum_count)
+        self.total_pacgums = supers + simples
 
-        self.grid[0][0] = 2
-        self.grid[0][w - 1] = 2
-        self.grid[h - 1][0] = 2
-        self.grid[h - 1][w - 1] = 2
+    def _place_super_pacgums(self) -> int:
+        """Pose un super-pacgum dans chaque coin.
 
-        empty_cells = []
-        for y in range(h):
-            for x in range(w):
-                if self.grid[y][x] == 0:
-                    empty_cells.append((y, x))
-
-        count_to_place = min(pacgum_count, len(empty_cells))
-        chosen_cells = random.sample(empty_cells, count_to_place)
-
-        for y, x in chosen_cells:
-            self.grid[y][x] = 1
-
-        self.total_pacgums = count_to_place + 4
-
-    def eat(self, row: int, col: int) -> int | None:
+        Retourne le nombre réellement posé.
         """
-        Le joueur essaie de manger la case (row, col).
-        Retourne 1 si c'était un pacgum, 2 si c'était un super-pacgum, None si rien.
-        Met à jour la grille et le compteur.
-        """
-        if self.grid[row][col] == 1:
-            self.grid[row][col] = None
-            self.pacgums_eaten += 1
-            return 1
-        elif self.grid[row][col] == 2:
-            self.grid[row][col] = None
-            self.pacgums_eaten += 1
-            return 2
-        else:
-            return None
+        count = 0
+        corners = self.maze.corners
+        for y, x in corners:
+            cell = self.maze.grid[y][x]
+            cell.content = SUPER_PACGUM
+            count += 1
+        return count
 
+    def _eligible_cells(self) -> list[tuple[int, int]]:
+        """Cases pouvant recevoir un pacgum simple.
+
+        Exclut les cases isolées du motif '42', celles déjà
+        occupées, et la case de spawn du joueur.
+        """
+        eligible = []
+        for y in range(self.maze.height):
+            for x in range(self.maze.width):
+                cell = self.maze.grid[y][x]
+                if cell.is_isolated:
+                    continue
+                if cell.content != EMPTY:
+                    continue
+                if (y, x) == self.maze.spawn:
+                    continue
+                eligible.append((y, x))
+        return eligible
+
+    def _place_pacgums(self, wanted: int) -> int:
+        """Tire au sort et pose les pacgums simples.
+
+        Retourne le nombre réellement posé.
+        """
+        eligible = self._eligible_cells()
+        count = min(wanted, len(eligible))
+        for y, x in random.sample(eligible, count):
+            self.maze.grid[y][x].content = PACGUM
+        return count
+
+    def eat(self, y: int, x: int) -> int:
+        """Consomme le collectible en (y, x).
+
+        Retourne PACGUM, SUPER_PACGUM, ou EMPTY si rien.
+        """
+        cell = self.maze.cell_at(y, x)
+        if cell is None:
+            return EMPTY
+        eaten = cell.take_gum()
+        if eaten != EMPTY:
+            self.pacgums_eaten += 1
+        return eaten
 
     def are_all_eaten(self) -> bool:
-        """
-        Retourne True si tous les pacgums et super-pacgums ont été mangés.
-        """
+        """True si tous les collectibles ont été mangés."""
         return self.pacgums_eaten == self.total_pacgums
