@@ -50,3 +50,4 @@ class Screen(ABC):
             surface: The pygame surface to draw on (the window surface).
         """
         pass
+    
