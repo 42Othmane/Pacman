@@ -5,7 +5,6 @@ Displays: Start Game / View Highscores / Instructions / Exit.
 from typing import Optional
 import pygame
 from ui.screens.base import Screen, ScreenName
-# from highscore.manager import load_highscores
 
 
 COLOR_BACKGROUND = (0, 0, 0)
@@ -46,7 +45,7 @@ class MenuScreen(Screen):
         """Return PLAYING when Start is chosen, else stay on MENU."""
         if self.selected_option == "Start Game":
             self.selected_option = None
-            return ScreenName.PAUSED
+            return ScreenName.PLAYING
         elif self.selected_option == "Highscores":
             self.selected_option = None
             return ScreenName.HIGHSCORES

@@ -17,15 +17,24 @@ Forbidden: pygame.mixer, pygame.sprite collision helpers, joystick, network.
 """
 from typing import Optional, Dict, Type
 
+import sys
+
 import pygame
 
 from ui.screens.base import Screen, ScreenName
 from ui.screens.menu_screen import MenuScreen
 from ui.screens.highscores_screen import HighscoresScreen
 from ui.screens.instructions_screen import InstructionsScreen
+from ui.screens.playing_screen import PlayingScreen
 from ui.screens.pause_screen import PauseScreen
 from ui.screens.game_over_screen import GameOverScreen
 from ui.screens.victory_screen import VictoryScreen
+
+from maze.loader import load_maze
+
+from highscore.manager import load_highscores
+
+from config.settings import load_config
 
 FPS = 60
 WINDOW_TITLE = "Pac-Man"
@@ -36,7 +45,6 @@ COLOR_BACKGROUND = (0, 0, 0)
 
 class RenderLoop:
     """Owns the pygame window and drives the main update/draw loop."""
-
     def __init__(self, width: int, height: int) -> None:
         """Initialize pygame and open the game window.
 
@@ -49,6 +57,11 @@ class RenderLoop:
         pygame.display.set_caption(WINDOW_TITLE)
         self.clock = pygame.time.Clock()
         self.running = False
+
+        self.w = width
+        self.h = height
+        self.config = load_config(sys.argv[1])
+        self.maze = load_maze(self.config["levels"][0]["width"], self.config["levels"][0]["height"], 42)
         
         # Screen management
         self.screens: Dict[ScreenName, Screen] = {}
@@ -57,34 +70,20 @@ class RenderLoop:
         
         # Initialize all screens
         self._init_screens()
-        
-        # Start with menu
+
         self.switch_to_screen(ScreenName.MENU)
+
+
 
     def _init_screens(self) -> None:
         """Initialize all available screens."""
-        # Menu screen
         self.screens[ScreenName.MENU] = MenuScreen()
-        
-        # Highscores screen
-        self.screens[ScreenName.HIGHSCORES] = HighscoresScreen([])
-        
-        # Instructions screen
+        self.screens[ScreenName.HIGHSCORES] = HighscoresScreen(load_highscores(self.config["highscore_filename"]))
         self.screens[ScreenName.INSTRUCTIONS] = InstructionsScreen()
-        
-        # Pause sceen
+        self.screens[ScreenName.PLAYING] = PlayingScreen(self.config, 0, self.w, self.h)
         self.screens[ScreenName.PAUSED] = PauseScreen()
-
-        # Game Over screen
         self.screens[ScreenName.GAME_OVER] = GameOverScreen(0)
-
-        # Victory screen
         self.screens[ScreenName.VICTORY] = VictoryScreen(0)
-
-        # TODO: Add other screens as they are implemented
-        # self.screens[ScreenName.PLAYING] = PlayingScreen()
-        # self.screens[ScreenName.GAME_OVER] = GameOverScreen()
-        # self.screens[ScreenName.VICTORY] = VictoryScreen()
 
     def switch_to_screen(self, screen_name: ScreenName) -> None:
         """Switch to a different screen."""

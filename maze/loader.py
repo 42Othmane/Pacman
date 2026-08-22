@@ -9,8 +9,7 @@ import sys
 
 from mazegenerator import MazeGenerator
 
-from cell import Cell
-
+from maze.cell import Cell
 
 class Maze:
     """Un labyrinthe prêt à jouer : grille, spawn et coins."""

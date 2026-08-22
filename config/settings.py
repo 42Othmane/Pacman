@@ -11,7 +11,7 @@ STATE_STRING_ESCAPE = 4
 
 DEFAULT_CONFIG = {
     "highscore_filename": "highscore.json",
-    "levels": [{"width": 21, "height": 21}],
+    "levels": [{"width": 15, "height": 15}],
     "lives": 3,
     "pacgum": 42,
     "points_per_pacgum": 10,
@@ -109,7 +109,6 @@ def _validate_levels(levels: list) -> list | None:
         return None
     return valid
 
-        
 
 def _strip_comments(json_text: str) -> str:
     result = []
