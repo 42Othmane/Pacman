@@ -10,6 +10,8 @@ sprite later (see playing_screen.py's _draw_ghosts).
 """
 from typing import Optional
 
+import pygame
+
 # (dy, dx) offset for each maze direction, matching Cell.is_open()'s
 # convention (grid[y][x], "N"/"E"/"S"/"W").
 _DIRECTION_DELTAS: dict[str, tuple[int, int]] = {
@@ -26,15 +28,19 @@ ARRIVAL_EPSILON = 1.0  # pixels; below this, snap to the waypoint
 class Ghost:
     """A single ghost. Position is stored as its pixel center."""
 
-    def __init__(self, x: float, y: float) -> None:
+    def __init__(self, x: float, y: float, sprite: "pygame.Surface") -> None:
         """Initialize a ghost at the given pixel position.
 
         Args:
             x: Center x position, in pixels.
             y: Center y position, in pixels.
+            sprite: Pre-loaded, pre-scaled sprite surface for this
+                ghost (see ui/draw_ghosts.py). Not loaded here — loading
+                image files is I/O and must not repeat per instance.
         """
         self.x = x
         self.y = y
+        self.sprite = sprite
         self.waypoint: Optional[tuple[float, float]] = None
         # Cell the ghost is currently leaving, excluded from candidates
         # in _choose_next_waypoint to prevent back-and-forth oscillation.

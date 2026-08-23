@@ -7,6 +7,7 @@ signature/attribute names as needed.
 import pygame
 from maze.loader import load_maze
 from game.ghost import Ghost
+from ui.draw_ghosts import load_ghost_sprites, draw_ghosts
 
 COLOR_BACKGROUND = (0, 0, 0)
 COLOR_WALL = (33, 33, 222)
@@ -68,12 +69,13 @@ class PlayingScreen:
         self.offset_x = (window_width - maze_pixel_width) // 2
         self.offset_y = HUD_HEIGHT
 
+        ghost_sprites = load_ghost_sprites(self.tile_size)
         self.ghosts: list[Ghost] = []
-        for corner_y, corner_x in self.maze.corners:
+        for i, (corner_y, corner_x) in enumerate(self.maze.corners):
             px, py = self._cell_pixel_pos(corner_x, corner_y)
             center_x = px + self.tile_size // 2
             center_y = py + self.tile_size // 2
-            self.ghosts.append(Ghost(center_x, center_y))
+            self.ghosts.append(Ghost(center_x, center_y, ghost_sprites[i]))
 
 
         self.lives = config["lives"]
@@ -150,20 +152,9 @@ class PlayingScreen:
                             surface, COLOR_SUPER_PACGUM, center,
                             SUPER_PACGUM_RADIUS,
                         )
-    
-    def _draw_ghosts(self, surface: "pygame.Surface") -> None:
-        """Draw each ghost as a placeholder colored square.
-
-        Args:
-            surface: The pygame surface to draw on.
-        """
-        size = self.tile_size * GHOST_SIZE_RATIO
-        for ghost in self.ghosts:
-            rect = pygame.Rect(0, 0, size, size)
-            rect.center = (ghost.x, ghost.y)
-            pygame.draw.rect(surface, COLOR_GHOST, rect)
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BACKGROUND)
         self._draw_maze(surface)
-        self._draw_ghosts(surface)
+        draw_ghosts(surface, self.ghosts)
+        # TODO: draw player, HUD.
