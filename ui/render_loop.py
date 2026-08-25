@@ -63,10 +63,14 @@ class RenderLoop:
         self.config = load_config(sys.argv[1])
         self.maze = load_maze(self.config["levels"][0]["width"], self.config["levels"][0]["height"], 42)
         
+        self.hs_file = self.config["highscore_filename"]
+        self.hs_list = load_highscores(self.hs_file)
+
         # Screen management
         self.screens: Dict[ScreenName, Screen] = {}
         self.current_screen: Optional[ScreenName] = None
         self.playing_screen_backup: Optional[Screen] = None
+        # self.playing_screen_backup: Optional[Screen] = None
         
         # Initialize all screens
         self._init_screens()
@@ -78,12 +82,12 @@ class RenderLoop:
     def _init_screens(self) -> None:
         """Initialize all available screens."""
         self.screens[ScreenName.MENU] = MenuScreen()
-        self.screens[ScreenName.HIGHSCORES] = HighscoresScreen(load_highscores(self.config["highscore_filename"]))
+        self.screens[ScreenName.HIGHSCORES] = HighscoresScreen(self.hs_list)
         self.screens[ScreenName.INSTRUCTIONS] = InstructionsScreen()
         self.screens[ScreenName.PLAYING] = PlayingScreen(self.config, 0, self.w, self.h)
         self.screens[ScreenName.PAUSED] = PauseScreen()
-        self.screens[ScreenName.GAME_OVER] = GameOverScreen(0)
-        self.screens[ScreenName.VICTORY] = VictoryScreen(0)
+        self.screens[ScreenName.GAME_OVER] = GameOverScreen(0, self.hs_file, self.hs_list)
+        self.screens[ScreenName.VICTORY] = VictoryScreen(0, self.hs_file, self.hs_list)
 
     def switch_to_screen(self, screen_name: ScreenName) -> None:
         """Switch to a different screen."""
@@ -100,11 +104,15 @@ class RenderLoop:
 
         if screen_name == ScreenName.GAME_OVER:
             final_score = self.screens[ScreenName.PLAYING].score
-            self.screens[ScreenName.GAME_OVER] = GameOverScreen(final_score)
+            self.screens[ScreenName.GAME_OVER] = GameOverScreen(final_score, self.hs_file, self.hs_list)
         elif screen_name == ScreenName.VICTORY:
             final_score = self.screens[ScreenName.PLAYING].score
-            self.screens[ScreenName.VICTORY] = VictoryScreen(final_score)
-            
+            self.screens[ScreenName.VICTORY] = VictoryScreen(2000, self.hs_file, self.hs_list)
+        
+        if screen_name == ScreenName.HIGHSCORES:
+            self.hs_list = load_highscores(self.hs_file)
+            self.screens[ScreenName.HIGHSCORES] = HighscoresScreen(self.hs_list)
+
         if screen_name in self.screens:
             self.current_screen = screen_name
             screen = self.screens.get(screen_name)

@@ -5,6 +5,7 @@ Handles player name input and highscore saving.
 from typing import Optional
 import pygame
 from ui.screens.base import Screen, ScreenName
+import highscore.manager as hs
 
 # Couleurs communes
 COLOR_BACKGROUND = (0, 0, 0)
@@ -29,7 +30,7 @@ class ScoreEntryScreen(Screen):
         - Highscore saving with error handling
     """
 
-    def __init__(self, final_score: int, title: str, title_color: tuple) -> None:
+    def __init__(self, final_score: int, title: str, title_color: tuple, filename: str, hs_list: list) -> None:
         """Initialize the score entry screen.
 
         Args:
@@ -40,6 +41,8 @@ class ScoreEntryScreen(Screen):
         self.final_score = final_score
         self.title = title
         self.title_color = title_color
+        self.filename = filename
+        self.hs_list = hs_list
         
         # État de la saisie
         self.player_name = ""
@@ -107,14 +110,9 @@ class ScoreEntryScreen(Screen):
     def _save_highscore(self) -> None:
         """Save the highscore using the highscore manager."""
         try:
-            # Placeholder pour le module highscore de ton mate
-            # from highscore.manager import add_highscore
-            # success = add_highscore(self.player_name, self.final_score)
-            
-            # TODO: Remplacer par l'appel réel
-            success = True  # Simuler une sauvegarde réussie
-            
-            if success:
+            if hs._validate_name(self.player_name):
+                newlist = hs.add_highscore(self.player_name, self.final_score, self.hs_list)
+                hs.save_highscores(self.filename, newlist)
                 self.saved = True
                 self.name_confirmed = True
             else:

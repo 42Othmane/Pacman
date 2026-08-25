@@ -7,7 +7,7 @@ from ui.screens.score_entry_screen import ScoreEntryScreen
 class GameOverScreen(ScoreEntryScreen):
     """Game Over screen with score entry."""
 
-    def __init__(self, final_score: int) -> None:
+    def __init__(self, final_score: int, filename: str, hs_list: list) -> None:
         """Initialize the Game Over screen.
 
         Args:
@@ -15,6 +15,8 @@ class GameOverScreen(ScoreEntryScreen):
         """
         super().__init__(
             final_score=final_score,
+            filename = filename,
+            hs_list = hs_list,
             title="GAME OVER",
             title_color=(255, 0, 0)  # Rouge
         )

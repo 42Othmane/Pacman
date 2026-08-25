@@ -32,7 +32,7 @@ HUD_HEIGHT = 60  # reserved band at the top for score/lives/level/timer
 DEBUG_FAKE_GUM_KEY = pygame.K_n
 DEBUG_KILL_GHOSTS_KEY = pygame.K_k
 
-LEVEL_TRANSITION_DURATION = 12.0  # seconds; temporary, tune as needed
+LEVEL_TRANSITION_DURATION = 2.0  # seconds; temporary, tune as needed
 COLOR_TRANSITION_TEXT = (255, 255, 0)
 FONT_SIZE_TRANSITION = 48
 
