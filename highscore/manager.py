@@ -3,6 +3,19 @@ import sys
 from pathlib import Path
 import re
 
+
+def _is_valid_entry(entry: object) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    if "name" not in entry or "score" not in entry:
+        return False
+    if not isinstance(entry["name"], str):
+        return False
+    if type(entry["score"]) is not int:
+        return False
+    return entry["score"] >= 0
+
+
 def load_highscores(filepath: str) -> list:
     """
     Lit le fichier de highscores sur le disque.
@@ -23,7 +36,13 @@ def load_highscores(filepath: str) -> list:
         print(f"Error loading highscores: {e}. Returning empty.", file=sys.stderr)
         return []
     
-    return highscore_data
+    valid = []
+    for entry in highscore_data:
+        if _is_valid_entry(entry):
+            valid.append(entry)
+
+    return valid
+
 
 def save_highscores(filepath: str, data: list) -> None:
     """
@@ -35,16 +54,22 @@ def save_highscores(filepath: str, data: list) -> None:
     except Exception as e:
         print(f"Error saving highscores: {e}", file=sys.stderr)
 
-def _validate_name(name: str) -> bool:
-    return re.fullmatch(r"^[A-Za-z0-9 ]{1,10}$", name.strip()) is not None
+def _validate_name(name: object) -> bool:
+    """True si le nom est valide : 1 à 10 caractères alphanumériques ou espaces."""
+    if not isinstance(name, str):
+        return False
+    return re.fullmatch(r"[A-Za-z0-9 ]{1,10}", name.strip()) is not None
 
 def add_highscore(name: str, score: int, existing_scores: list) -> list:
+    
     updated_scores = existing_scores.copy()
-    name = name.strip()
+
     if not _validate_name(name):
         name = "UNKNOWN"
+    else:
+        name = name.strip()
     
-    if not isinstance(score, int) or score < 0:
+    if type(score) is not int or score < 0:
         score = 0
 
     updated_scores.append({"name": name, "score": score})
