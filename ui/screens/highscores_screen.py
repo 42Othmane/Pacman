@@ -62,7 +62,11 @@ class HighscoresScreen(Screen):
             return
 
         start_y = 140
-        for rank, (name, score) in enumerate(self.scores, start=1):
+        # print(self.scores)
+        for rank, entry in enumerate(self.scores, start=1):
+            # Si entry est {"name": "...", "score": ...}
+            name = entry.get("name", "Unknown")
+            score = entry.get("score", 0)
             line = f"{rank}. {name} - {score} pts"
             line_surf = self.font_entry.render(line, True, COLOR_TEXT)
             line_rect = line_surf.get_rect(
