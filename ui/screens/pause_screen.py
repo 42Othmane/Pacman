@@ -54,6 +54,11 @@ class PauseScreen(Screen):
         if self.selected_option == "Main Menu":
             self.selected_option = None
             return ScreenName.MENU
+    
+    def reset(self) -> None:
+        """Reset the pause menu to its initial state (called on re-entry)."""
+        self.index = 0
+        self.selected_option = None
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the pause overlay (e.g. dimmed background + options)."""
