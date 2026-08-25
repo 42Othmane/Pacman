@@ -1,8 +1,8 @@
 """Entry point: python3 src/pacman/main.py config.json"""
 import sys
-from ui.render_loop import RenderLoop, build_render_loop
-from ui.screens.base import ScreenName
-# from maze.loader import load_maze
+from typing import NoReturn
+from ui.render_loop import RenderLoop, GameState, build_render_loop
+from ui.screens.base import ScreenName #
 
 def main() -> None:
     """Parse CLI args, load config, and start the game loop.
@@ -20,6 +20,9 @@ def main() -> None:
     # loop.switch_to_screen(ScreenName.VICTORY)
     # --- FIN TEST ---
 
+    loop.run()
+
+    loop = build_render_loop(800, 600)
     loop.run()
 
     raise SystemExit(0)

@@ -1,16 +1,3 @@
-# --- Dev / quality tools (mandatory per subject) ---
 flake8
 mypy
-
-# --- Graphics library ---
-# IMPORTANT: to be chosen and validated by the team before coding starts.
-# Constraint (subject, chap. 4): a library is only "similar to MLX" if every
-# function you use from it has an MLX equivalent. Do NOT pick a
-# full-featured engine (e.g. plain pygame with mixer/sound/physics) without
-# checking each API you actually call against MLX's function set.
-# Candidates to evaluate: pygame (subset only), pyxel, arcade (subset only).
-# Document the final choice + justification in README.md > Implementation.
-
-# --- A-Maze-ing package (assigned by staff) ---
-# Add it here once you receive it, e.g.:
-# a-maze-ing @ git+https://github.com/<group>/a-maze-ing.git
+pygame
