@@ -7,8 +7,8 @@ manager ne fait que les placer et compter ce qui a été mangé.
 
 import random
 
-from cell import EMPTY, PACGUM, SUPER_PACGUM
-from loader import Maze
+from maze.cell import EMPTY, PACGUM, SUPER_PACGUM
+from maze.loader import Maze
 
 
 class CollectibleManager:

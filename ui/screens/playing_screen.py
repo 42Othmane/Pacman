@@ -9,7 +9,11 @@ import pygame
 
 from ui.screens.base import Screen, ScreenName
 from ui.draw_ghosts import load_ghost_sprites, draw_ghosts
+from ui.draw_player import load_player_frames, FRAME_COUNT
 from game.ghost import Ghost
+from game.collectables import CollectibleManager
+from game.player import Player
+from maze.cell import PACGUM, SUPER_PACGUM
 from maze.loader import load_maze
 
 # --- Colors (classic Pac-Man palette) ---
@@ -25,12 +29,28 @@ SUPER_PACGUM_RADIUS = 8
 
 HUD_HEIGHT = 60  # reserved band at the top for score/lives/level/timer
 
-# --- TEMPORARY: Lot A hasn't shipped pacgum placement yet, so every
-# maze loads with zero gums. This flag lets us fake "1 gum remaining"
-# and clear it on a debug key, to validate level-to-level progression
-# in isolation. REMOVE once real gum placement is in place. ---
-DEBUG_FAKE_GUM_KEY = pygame.K_n
 DEBUG_KILL_GHOSTS_KEY = pygame.K_k
+
+# --- Player (Lot A) ---
+COLOR_PLAYER = (255, 255, 0)
+
+# Seconds between two cell steps. 0.25 -> 4 cells/second, slightly
+# faster than the ghosts (SPEED_TILES_PER_SECOND = 3.0).
+PLAYER_MOVE_INTERVAL = 0.25
+
+# Mouth animation: full open/close cycle per cell step, so the chomp
+# lines up with the movement.
+PLAYER_ANIMATION_FPS = FRAME_COUNT * 2
+
+# Arrow keys and ZQSD/WASD, mapped to Cell.is_open() directions.
+MOVEMENT_KEYS: dict[int, str] = {
+    pygame.K_UP: "N", pygame.K_DOWN: "S",
+    pygame.K_RIGHT: "E", pygame.K_LEFT: "W",
+    pygame.K_z: "N", pygame.K_w: "N",
+    pygame.K_s: "S",
+    pygame.K_d: "E",
+    pygame.K_q: "W", pygame.K_a: "W",
+}
 
 LEVEL_TRANSITION_DURATION = 2.0  # seconds; temporary, tune as needed
 COLOR_TRANSITION_TEXT = (255, 255, 0)
@@ -72,10 +92,9 @@ class PlayingScreen(Screen):
         self.transition_timer: Optional[float] = None
         self.font_transition = pygame.font.Font(None, FONT_SIZE_TRANSITION)
 
-        # TEMPORARY: see DEBUG_FAKE_GUM_KEY above.
-        self._debug_gum_emptied = False
-
-        # TODO(Lot A): player object/position, hooked in once available.
+        # Accumulates dt until a full PLAYER_MOVE_INTERVAL has elapsed,
+        # at which point the player advances by one cell.
+        self.move_timer = 0.0
 
     # --- Level setup / progression ---------------------------------
 
@@ -116,6 +135,11 @@ class PlayingScreen(Screen):
         self.offset_x = (self.window_width - maze_pixel_width) // 2
         self.offset_y = HUD_HEIGHT
 
+        # Depends on tile_size, so it must be reloaded every level.
+        self.player_frames = load_player_frames(self.tile_size)
+        print(self.player_frames)
+        self.animation_timer = 0.0
+
         ghost_sprites, vulnerable_sprite = load_ghost_sprites(self.tile_size)
         self.ghosts: list[Ghost] = []
         for i, (corner_y, corner_x) in enumerate(self.maze.corners):
@@ -126,38 +150,30 @@ class PlayingScreen(Screen):
                 Ghost(center_x, center_y, ghost_sprites[i], vulnerable_sprite)
             )
 
-        self.time_remaining = float(self.config["level_max_time"])
-        self._debug_gum_emptied = False  # TEMPORARY, see top of file
+        # Lot A owns gum placement and the player; the screen only
+        # renders them and forwards input.
+        self.collectibles = CollectibleManager(
+            self.maze, self.config["pacgum"]
+        )
+        self.player = Player(self.maze, self.lives)
+        self.move_timer = 0.0
 
-        # TODO(Lot A): reposition the player at self.maze.spawn here too.
+        self.time_remaining = float(self.config["level_max_time"])
 
     def _load_next_level(self) -> None:
         """Advance to the next level, keeping score and lives."""
         self._setup_level(self.level_index + 1)
 
     def _count_remaining_gums(self) -> int:
-        """Count pacgums and super-pacgums still present in the maze.
-
-        TEMPORARY: real gum placement isn't shipped yet (Lot A), so
-        every maze currently loads with zero gums (see Cell.__init__).
-        Fake a single remaining gum, clearable via DEBUG_FAKE_GUM_KEY,
-        so level-to-level progression can be tested in isolation.
-        Remove this override once real placement lands — the real
-        counting logic below already works as-is.
+        """Return how many pacgums and super-pacgums are still uneaten.
 
         Returns:
-            The number of cells whose content is not EMPTY.
+            The number of collectibles left in the current level.
         """
-        real_count = 0
-        for row in self.maze.grid:
-            for cell in row:
-                if cell.has_gum:
-                    real_count += 1
-
-        if real_count == 0:
-            return 0 if self._debug_gum_emptied else 1
-
-        return real_count
+        return (
+            self.collectibles.total_pacgums
+            - self.collectibles.pacgums_eaten
+        )
 
     # --- Coordinate helpers ------------------------------------------
 
@@ -175,6 +191,37 @@ class PlayingScreen(Screen):
         pixel_y = self.offset_y + y * self.tile_size
         return pixel_x, pixel_y
 
+    # --- Player ------------------------------------------------------
+
+    def _update_player(self, dt: float) -> None:
+        """Advance the player and apply what it walks over.
+
+        The player owns a discrete cell position; move_progress only
+        drives the rendering interpolation. A while loop is used rather
+        than an if so a long frame catches up instead of dropping steps.
+
+        Args:
+            dt: Time elapsed since the last frame, in seconds.
+        """
+        self.player.tick(dt, 1.0 / PLAYER_MOVE_INTERVAL)
+        self.animation_timer += dt
+
+        self.move_timer += dt
+        while self.move_timer >= PLAYER_MOVE_INTERVAL:
+            self.move_timer -= PLAYER_MOVE_INTERVAL
+            if not self.player.step():
+                break
+            self._eat_at_player()
+
+    def _eat_at_player(self) -> None:
+        """Consume the collectible under the player, if any."""
+        eaten = self.collectibles.eat(*self.player.position)
+        if eaten == PACGUM:
+            self.score += self.points_per_pacgum
+        elif eaten == SUPER_PACGUM:
+            self.score += self.points_per_super_pacgum
+            # TODO(Lot B): make ghosts edible for a while (spec 6.4).
+
     # --- Screen interface ---------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -182,9 +229,10 @@ class PlayingScreen(Screen):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
                 self._pause_requested = True
-            elif event.key == DEBUG_FAKE_GUM_KEY:
-                # TEMPORARY: simulate eating the last gum for testing.
-                self._debug_gum_emptied = True
+            elif event.key in MOVEMENT_KEYS:
+                # Lot A's Player keeps the request until the passage
+                # opens up, so turns can be buffered before a junction.
+                self.player.request_direction(MOVEMENT_KEYS[event.key])
             elif event.key == DEBUG_KILL_GHOSTS_KEY:
                 # TEMPORARY: simulate the player eating every ghost,
                 # standing in for real player/ghost collision detection
@@ -195,7 +243,8 @@ class PlayingScreen(Screen):
             elif event.key == pygame.K_r:
                 for ghost in self.ghosts:
                     ghost.is_edible = not ghost.is_edible
-        # TODO(Lot A/B): movement key handling for the player.
+            if event.key == pygame.K_n:
+                self.transition_timer = LEVEL_TRANSITION_DURATION
         # TODO: cheat mode hotkeys (spec 6.5).
 
     def update(self, dt: float) -> Optional[ScreenName]:
@@ -225,13 +274,13 @@ class PlayingScreen(Screen):
                 self._load_next_level()
             return None
 
-        # Ghosts currently target the maze's spawn cell as a placeholder
-        # until the player's position is available from Lot A.
+        self._update_player(dt)
+
         for ghost in self.ghosts:
             ghost.update(
                 dt,
                 self.maze,
-                self.maze.spawn,  # TODO: replace with player's cell
+                self.player.position,
                 self.tile_size,
                 self.offset_x,
                 self.offset_y,
@@ -241,9 +290,9 @@ class PlayingScreen(Screen):
         # TODO: handle time_remaining <= 0 (restart level? end game? —
         # spec 6.7, behavior is your choice).
 
-        # TODO(Lot A/B): player movement, player/ghost collisions,
-        # gum eating and score increment — see "État de jeu partagé" in
-        # the cahier des charges.
+        # TODO(Lot A/B): player/ghost collisions — needs a shared cell
+        # accessor on Ghost, see "État de jeu partagé" in the cahier
+        # des charges.
 
         if self.lives <= 0:
             return ScreenName.GAME_OVER
@@ -260,12 +309,53 @@ class PlayingScreen(Screen):
         """Draw the maze, ghosts, and (eventually) player and HUD."""
         surface.fill(COLOR_BACKGROUND)
         self._draw_maze(surface)
+        self._draw_player(surface)
         draw_ghosts(surface, self.ghosts)
-        # TODO(Lot A/B): draw player.
         # TODO: draw HUD (score, lives, level, time_remaining) — spec 6.8.
 
         if self.transition_timer is not None:
             self._draw_transition_message(surface)
+
+    def _draw_player(self, surface: pygame.Surface) -> None:
+        """Draw the player, interpolated between its two cells.
+
+        Lot A stores the player on a whole cell; move_progress (0.0 to
+        1.0) says how far along the current step it is, which is what
+        makes the movement look continuous. The sprite is picked from
+        the pre-rotated frames for the current direction, falling back
+        to a plain circle if the sheet failed to load.
+
+        Args:
+            surface: The pygame surface to draw on.
+        """
+        player = self.player
+        progress = player.move_progress
+        cell_y = player.prev_y * (1.0 - progress) + player.y * progress
+        cell_x = player.prev_x * (1.0 - progress) + player.x * progress
+
+        center_x = int(
+            self.offset_x + cell_x * self.tile_size + self.tile_size / 2
+        )
+        center_y = int(
+            self.offset_y + cell_y * self.tile_size + self.tile_size / 2
+        )
+        if self.player_frames is None:
+            radius = max(2, self.tile_size // 2 - 2)
+            pygame.draw.circle(
+                surface, COLOR_PLAYER, (center_x, center_y), radius
+            )
+            return
+
+        # Freeze on the closed-mouth frame while standing still.
+        if self.player.move_progress >= 1.0:
+            frame_index = 0
+        else:
+            frame_index = int(
+                self.animation_timer * PLAYER_ANIMATION_FPS
+            ) % FRAME_COUNT
+
+        sprite = self.player_frames[self.player.direction][frame_index]
+        surface.blit(sprite, sprite.get_rect(center=(center_x, center_y)))
 
     def _draw_transition_message(self, surface: pygame.Surface) -> None:
         """Draw the 'Level Complete' message during a level transition.
