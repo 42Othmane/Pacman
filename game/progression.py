@@ -38,6 +38,9 @@ class Game:
         self.collectibles = None
         self.player = None
 
+        self.move_interval = 0.25
+        self.move_timer = 0.0
+
         self.start_level(0)
 
     def start_level(self, index: int) -> bool:
@@ -62,10 +65,14 @@ class Game:
         return True
 
     def handle_input(self, direction: str) -> None:
-        """Déplace le joueur et applique les conséquences."""
+        """Enregistre la direction souhaitée par le joueur."""
         if self.state != STATE_PLAYING:
             return
-        if not self.player.move(direction):
+        self.player.request_direction(direction)
+
+    def _step_player(self) -> None:
+        """Avance le joueur d'une case et applique les conséquences."""
+        if not self.player.step():
             return
         y, x = self.player.position
         eaten = self.collectibles.eat(y, x)
@@ -77,9 +84,18 @@ class Game:
             self.next_level()
 
     def tick(self, delta: float) -> None:
-        """Fait avancer le temps de `delta` secondes."""
         if self.state != STATE_PLAYING:
             return
+
+        self.player.tick(delta, 1.0 / self.move_interval)
+
+        self.move_timer += delta
+        while self.move_timer >= self.move_interval:
+            self.move_timer -= self.move_interval
+            self._step_player()
+            if self.state != STATE_PLAYING:
+                break
+
         self.time_left -= delta
         if self.time_left <= 0:
             self.time_left = 0

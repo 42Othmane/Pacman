@@ -16,11 +16,39 @@ DELTAS = {
 class Player:
     """Pac-Man : sa position dans le labyrinthe et ses vies."""
 
-    def __init__(self, maze: Maze, lives: int) -> None:
+    def __init__(self, maze:  Maze, lives: int) -> None:
         self.maze = maze
         self.lives = lives
         self.y, self.x = maze.spawn
         self.direction = "E"
+        self.prev_y, self.prev_x = self.y, self.x
+        self.move_progress: float = 1.0
+        self.next_direction: str | None = None
+
+    def request_direction(self, direction: str) -> None:
+        """Enregistre la direction souhaitée par le joueur.
+
+        Elle sera appliquée dès que le passage sera possible.
+        """
+        if direction in DELTAS:
+            self.next_direction = direction
+
+
+    def step(self) -> bool:
+        """Avance d'une case. True si le joueur a bougé."""
+        if self.next_direction is not None and self.can_move(self.next_direction):
+            self.direction = self.next_direction
+            self.next_direction = None
+        return self.move(self.direction)
+
+
+    def tick(self, delta: float, speed: float) -> None:
+        """Fait progresser l'animation de déplacement.
+
+        speed : cases par seconde.
+        """
+        if self.move_progress < 1.0:
+            self.move_progress = min(1.0, self.move_progress + delta * speed)
 
     @property
     def position(self) -> tuple[int, int]:
@@ -43,6 +71,8 @@ class Player:
         if not self.can_move(direction):
             return False
         dy, dx = DELTAS[direction]
+        self.prev_y, self.prev_x = self.y, self.x
+        self.move_progress = 0.0
         self.y += dy
         self.x += dx
         self.direction = direction
@@ -52,6 +82,10 @@ class Player:
         """Retire une vie et replace le joueur au spawn."""
         self.lives -= 1
         self.y, self.x = self.maze.spawn
+        self.prev_y, self.prev_x = self.y, self.x
+        self.move_progress = 1.0
+        self.direction = "E"
+        self.next_direction = None
 
 
     def is_game_over(self) -> bool:
