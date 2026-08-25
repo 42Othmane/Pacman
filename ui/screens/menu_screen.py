@@ -55,6 +55,11 @@ class MenuScreen(Screen):
         elif self.selected_option == "Exit":
             return ScreenName.EXIT
         return None
+    
+    def reset(self) -> None:
+        """Reset the menu to its initial state (called on re-entry)."""
+        self.index = 0
+        self.selected_option = None
 
     def draw(self, surface: "pygame.Surface") -> None:
         """Draw the Pac-Man themed main menu.

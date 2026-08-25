@@ -99,9 +99,11 @@ class RenderLoop:
                 self.screens[ScreenName.PLAYING] = self.playing_screen_backup
 
         if screen_name == ScreenName.GAME_OVER:
-            self.screens[ScreenName.GAME_OVER] = GameOverScreen(1234)
+            final_score = self.screens[ScreenName.PLAYING].score
+            self.screens[ScreenName.GAME_OVER] = GameOverScreen(final_score)
         elif screen_name == ScreenName.VICTORY:
-            self.screens[ScreenName.VICTORY] = VictoryScreen(5678)
+            final_score = self.screens[ScreenName.PLAYING].score
+            self.screens[ScreenName.VICTORY] = VictoryScreen(final_score)
             
         if screen_name in self.screens:
             self.current_screen = screen_name

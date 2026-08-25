@@ -1,12 +1,10 @@
 """Ghost entity (spec 6.3).
 
 Movement: greedy waypoint-following through the maze grid, always
-picking the open neighboring cell closest to the target cell. This is
-not optimal pathfinding (no backtracking out of dead ends), but keeps
-things simple as intended for a shared ghost behavior.
-
-Placeholder rendering: a plain colored square, to be replaced with a
-sprite later (see playing_screen.py's _draw_ghosts).
+picking the open neighboring cell closest (or farthest, when fleeing)
+to the target cell. This is not optimal pathfinding (no backtracking
+out of dead ends), but keeps things simple as intended for a shared
+ghost behavior.
 """
 from typing import Optional
 
@@ -23,29 +21,77 @@ _DIRECTION_DELTAS: dict[str, tuple[int, int]] = {
 
 SPEED_TILES_PER_SECOND = 3.0
 ARRIVAL_EPSILON = 1.0  # pixels; below this, snap to the waypoint
+RESPAWN_DELAY = 5.0  # seconds before an eaten ghost respawns
 
 
 class Ghost:
     """A single ghost. Position is stored as its pixel center."""
 
-    def __init__(self, x: float, y: float, sprite: "pygame.Surface") -> None:
-        """Initialize a ghost at the given pixel position.
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        normal_sprite: "pygame.Surface",
+        vulnerable_sprite: "pygame.Surface",
+    ) -> None:
+        """Initialize a ghost at the given pixel position (its corner spawn).
 
         Args:
-            x: Center x position, in pixels.
-            y: Center y position, in pixels.
-            sprite: Pre-loaded, pre-scaled sprite surface for this
-                ghost (see ui/draw_ghosts.py). Not loaded here — loading
-                image files is I/O and must not repeat per instance.
+            x: Center x position, in pixels. Also stored as the ghost's
+                respawn point (ghosts start at their corner, spec 6.1).
+            y: Center y position, in pixels. Also stored as the respawn
+                point.
+            normal_sprite: Pre-loaded, pre-scaled sprite used while the
+                ghost is neither edible nor eaten.
+            vulnerable_sprite: Pre-loaded, pre-scaled sprite used while
+                the ghost is edible (after a super-pacgum).
         """
         self.x = x
         self.y = y
-        self.sprite = sprite
+        self.spawn_x = x
+        self.spawn_y = y
+
+        self.normal_sprite = normal_sprite
+        self.vulnerable_sprite = vulnerable_sprite
+
         self.waypoint: Optional[tuple[float, float]] = None
         # Cell the ghost is currently leaving, excluded from candidates
         # in _choose_next_waypoint to prevent back-and-forth oscillation.
         self.previous_cell: Optional[tuple[int, int]] = None
-        # TODO: direction, is_edible, is_eaten/respawn timer (spec 6.3).
+
+        self.is_edible: bool = False
+        self.is_eaten: bool = False
+        self.respawn_timer: Optional[float] = None
+
+    @property
+    def sprite(self) -> "pygame.Surface":
+        """Return the sprite to draw for the ghost's current state.
+
+        Eaten ghosts are handled by the caller (draw_ghosts skips them
+        entirely), but this still returns a sensible surface if drawn.
+        """
+        return self.vulnerable_sprite if self.is_edible else self.normal_sprite
+
+    def get_eaten(self) -> None:
+        """Mark this ghost as eaten: hide it and start its respawn timer.
+
+        Called by PlayingScreen when the player touches this ghost
+        while it is edible.
+        """
+        self.is_eaten = True
+        self.is_edible = False
+        self.respawn_timer = RESPAWN_DELAY
+        self.waypoint = None
+        self.previous_cell = None
+
+    def _respawn(self) -> None:
+        """Reset the ghost to its corner spawn point, alive again."""
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        self.is_eaten = False
+        self.respawn_timer = None
+        self.waypoint = None
+        self.previous_cell = None
 
     def _pixel_to_cell(
         self, tile_size: int, offset_x: int, offset_y: int
@@ -72,11 +118,12 @@ class Ghost:
         offset_x: int,
         offset_y: int,
     ) -> tuple[float, float]:
-        """Pick the open neighboring cell closest to the target cell.
+        """Pick the open neighboring cell closest (or farthest, if
+        edible) to the target cell.
 
         Args:
             maze: The Maze object (grid[y][x], cell_at(y, x)).
-            target_cell: The (y, x) cell to move toward.
+            target_cell: The (y, x) cell to move toward (or away from).
             tile_size: Current tile size in pixels.
             offset_x: Maze horizontal pixel offset.
             offset_y: Maze vertical pixel offset (HUD band).
@@ -94,9 +141,6 @@ class Ghost:
         if current_cell is None:
             return (self.x, self.y)
 
-        # Gather all open, in-bounds neighbors, remembering which one
-        # (if any) corresponds to previous_cell so we can exclude it
-        # unless it turns out to be the only option (dead end).
         candidates: list[tuple[int, int]] = []
         for direction, (dy, dx) in _DIRECTION_DELTAS.items():
             if not current_cell.is_open(direction):
@@ -110,25 +154,30 @@ class Ghost:
             candidates.append((neighbor_x, neighbor_y))
 
         non_backtrack = [c for c in candidates if c != self.previous_cell]
-        # Only allow going back where we came from if it's the sole exit
-        # (dead end) — otherwise it would just bounce back and forth.
         usable_candidates = non_backtrack if non_backtrack else candidates
 
         best_pixel = (self.x, self.y)
-        best_distance = float("inf")
         best_cell: Optional[tuple[int, int]] = None
+        # When fleeing (edible), we want the FARTHEST neighbor, so start
+        # from -inf; when chasing, we want the CLOSEST, so start from
+        # +inf. Getting this initial value wrong silently breaks the
+        # comparison below (nothing ever looks "better").
+        best_distance = float("-inf") if self.is_edible else float("inf")
 
         for neighbor_x, neighbor_y in usable_candidates:
             distance = abs(neighbor_y - target_y) + abs(neighbor_x - target_x)
-            if distance < best_distance:
+            is_better = (
+                distance > best_distance
+                if self.is_edible
+                else distance < best_distance
+            )
+            if is_better:
                 best_distance = distance
                 best_cell = (neighbor_x, neighbor_y)
                 best_pixel = self._cell_center_pixel(
                     neighbor_x, neighbor_y, tile_size, offset_x, offset_y
                 )
 
-        # We're committing to leave (cell_x, cell_y) now, so it becomes
-        # the "previous cell" to avoid immediately reversing into it.
         if best_cell is not None:
             self.previous_cell = (cell_x, cell_y)
 
@@ -143,16 +192,28 @@ class Ghost:
         offset_x: int,
         offset_y: int,
     ) -> None:
-        """Advance the ghost by one frame toward target_cell.
+        """Advance the ghost by one frame.
+
+        While eaten, movement is skipped entirely and only the respawn
+        timer ticks down; once it reaches zero the ghost reappears at
+        its corner spawn point, alive and no longer edible.
 
         Args:
             dt: Time elapsed since the last frame, in seconds.
             maze: The Maze object.
-            target_cell: The (y, x) cell the ghost moves toward.
+            target_cell: The (y, x) cell the ghost moves toward (or
+                flees from, if edible).
             tile_size: Current tile size in pixels.
             offset_x: Maze horizontal pixel offset.
             offset_y: Maze vertical pixel offset (HUD band).
         """
+        if self.is_eaten:
+            if self.respawn_timer is not None:
+                self.respawn_timer -= dt
+                if self.respawn_timer <= 0:
+                    self._respawn()
+            return
+
         if self.waypoint is None:
             self.waypoint = self._choose_next_waypoint(
                 maze, target_cell, tile_size, offset_x, offset_y

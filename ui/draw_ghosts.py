@@ -24,34 +24,54 @@ SPRITE_DIR = "assets/sprites"
 # (top-left, top-right, bottom-left, bottom-right) — adjust if your
 # corner order differs.
 GHOST_COLORS = ["red", "pink", "blue", "green"]
+VULNERABLE_SPRITE_FILENAME = "vulnerable-ghost.png"
 
 
-def load_ghost_sprites(tile_size: int) -> list[pygame.Surface]:
-    """Load and scale one sprite per ghost color, once per level.
+def load_ghost_sprites(
+    tile_size: int,
+) -> tuple[list[pygame.Surface], pygame.Surface]:
+    """Load and scale one normal sprite per ghost color, plus the
+    single shared "edible" sprite, once per level.
 
     Args:
         tile_size: Current tile size in pixels (sprites are scaled to
             match, since it changes between levels).
 
     Returns:
-        A list of surfaces, in the same order as GHOST_COLORS.
+        A tuple of:
+            - a list of normal sprites, in the same order as
+              GHOST_COLORS.
+            - the shared vulnerable sprite, used by any ghost while
+              is_edible is True.
     """
-    sprites = []
+    normal_sprites = []
     for color in GHOST_COLORS:
         path = f"{SPRITE_DIR}/{color}ghost.png"
         raw = pygame.image.load(path).convert_alpha()
         scaled = pygame.transform.scale(raw, (tile_size, tile_size))
-        sprites.append(scaled)
-    return sprites
+        normal_sprites.append(scaled)
+
+    vulnerable_path = f"{SPRITE_DIR}/{VULNERABLE_SPRITE_FILENAME}"
+    vulnerable_raw = pygame.image.load(vulnerable_path).convert_alpha()
+    vulnerable_sprite = pygame.transform.scale(
+        vulnerable_raw, (tile_size, tile_size)
+    )
+
+    return normal_sprites, vulnerable_sprite
 
 
 def draw_ghosts(surface: pygame.Surface, ghosts: list["Ghost"]) -> None:
-    """Draw each ghost using its assigned sprite, centered on its position.
+    """Draw each non-eaten ghost using its current sprite.
+
+    Eaten ghosts are skipped entirely — they're "gone" until they
+    respawn (see Ghost.update / Ghost.get_eaten).
 
     Args:
         surface: The pygame surface to draw on.
         ghosts: The list of Ghost instances to render.
     """
     for ghost in ghosts:
+        if ghost.is_eaten:
+            continue
         rect = ghost.sprite.get_rect(center=(ghost.x, ghost.y))
         surface.blit(ghost.sprite, rect)
