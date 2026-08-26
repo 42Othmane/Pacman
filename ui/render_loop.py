@@ -101,13 +101,15 @@ class RenderLoop:
         if self.current_screen == ScreenName.PAUSED and screen_name == ScreenName.PLAYING:
             if self.playing_screen_backup:
                 self.screens[ScreenName.PLAYING] = self.playing_screen_backup
+        elif screen_name == ScreenName.PLAYING:
+            self.screens[ScreenName.PLAYING] = PlayingScreen(self.config, 0, self.w, self.h)
 
         if screen_name == ScreenName.GAME_OVER:
             final_score = self.screens[ScreenName.PLAYING].score
             self.screens[ScreenName.GAME_OVER] = GameOverScreen(final_score, self.hs_file, self.hs_list)
         elif screen_name == ScreenName.VICTORY:
             final_score = self.screens[ScreenName.PLAYING].score
-            self.screens[ScreenName.VICTORY] = VictoryScreen(2000, self.hs_file, self.hs_list)
+            self.screens[ScreenName.VICTORY] = VictoryScreen(final_score, self.hs_file, self.hs_list)
         
         if screen_name == ScreenName.HIGHSCORES:
             self.hs_list = load_highscores(self.hs_file)
