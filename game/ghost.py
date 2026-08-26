@@ -93,6 +93,23 @@ class Ghost:
         self.waypoint = None
         self.previous_cell = None
 
+    def reset_to_spawn(self) -> None:
+        """Send the ghost back to its corner, clearing its current path.
+
+        Used by PlayingScreen when the player dies. Clearing waypoint
+        and previous_cell is not optional: the ghost interpolates
+        toward waypoint in a straight line without re-checking walls,
+        so a stale waypoint left over from before the teleport would
+        make it glide across the maze through the walls.
+
+        Eaten/edible flags are left untouched — this is a repositioning,
+        not a respawn.
+        """
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        self.waypoint = None
+        self.previous_cell = None
+
     def _pixel_to_cell(
         self, tile_size: int, offset_x: int, offset_y: int
     ) -> tuple[int, int]:

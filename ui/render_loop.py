@@ -97,6 +97,12 @@ class RenderLoop:
         
         if screen_name == ScreenName.PAUSED and self.current_screen == ScreenName.PLAYING:
             self.playing_screen_backup = self.screens.get(ScreenName.PLAYING)
+
+        # Leaving for the menu ends the run: the paused game must never
+        # be restored afterwards, otherwise "Start Game" would resume
+        # the previous party instead of starting a fresh one.
+        if screen_name == ScreenName.MENU:
+            self.playing_screen_backup = None
         
         if self.current_screen == ScreenName.PAUSED and screen_name == ScreenName.PLAYING:
             if self.playing_screen_backup:
