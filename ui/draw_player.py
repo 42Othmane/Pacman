@@ -7,6 +7,7 @@ image loading and rotation are far too slow to redo every frame.
 """
 import os
 import sys
+from typing import Optional
 
 import pygame
 
@@ -25,11 +26,12 @@ DIRECTION_ANGLES: dict[str, int] = {"E": 0, "N": 90, "S": 270}
 
 def load_player_frames(
     tile_size: int,
-) -> dict[str, list[pygame.Surface]] | None:
+) -> Optional[dict[str, list[pygame.Surface]]]:
     """Load the sprite sheet and pre-render every direction and frame.
 
     Args:
-        tile_size: Current tile size in pixels; frames are scaled to it.
+        tile_size: Current tile size in pixels; frames are scaled to
+            it.
 
     Returns:
         A dict mapping "N"/"E"/"S"/"W" to that direction's list of
@@ -45,8 +47,10 @@ def load_player_frames(
     sheet_width, sheet_height = sheet.get_size()
     frame_width = sheet_width // FRAME_COUNT
     if frame_width <= 0 or sheet_height <= 0:
-        print("Player sprite sheet has unusable dimensions.",
-              file=sys.stderr)
+        print(
+            "Player sprite sheet has unusable dimensions.",
+            file=sys.stderr,
+        )
         return None
 
     size = max(1, tile_size)

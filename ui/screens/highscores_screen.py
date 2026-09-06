@@ -1,9 +1,18 @@
+"""Highscores screen (spec 5.5, 6.8).
+
+Displays the top 10 highscores. Returns to the main menu on
+Escape/Enter/Space.
+"""
 from typing import Optional
+
 import pygame
+
+from highscore.manager import HighscoreEntry
 from ui.screens.base import Screen, ScreenName
 
 COLOR_TEXT = (255, 255, 255)
 COLOR_TITLE = (255, 255, 0)
+COLOR_HINT = (128, 128, 128)
 FONT_SIZE_TITLE = 48
 FONT_SIZE_ENTRY = 28
 LINE_SPACING = 36
@@ -12,26 +21,29 @@ LINE_SPACING = 36
 class HighscoresScreen(Screen):
     """Read-only screen listing the top 10 scores."""
 
-    def __init__(self, scores: list[tuple[str, int]]) -> None:
+    def __init__(self, scores: list[HighscoreEntry]) -> None:
         """Store the highscore list to display.
 
         Args:
-            scores: List of (player_name, score) tuples, already sorted
-                and truncated to the top 10 by the highscore module.
+            scores: List of {"name": ..., "score": ...} entries,
+                already sorted and truncated to the top 10 by the
+                highscore module.
         """
         self.scores = scores
         self.should_return_to_menu = False
         self.font_title = pygame.font.Font(None, FONT_SIZE_TITLE)
         self.font_entry = pygame.font.Font(None, FONT_SIZE_ENTRY)
-    
+
     def reset_flags(self) -> None:
-        """Reset flags after transition is triggered."""
+        """Reset flags after a transition is triggered."""
         self.should_return_to_menu = False
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Return to the menu on Escape, Enter, or Space."""
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+            if event.key in (
+                pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE,
+            ):
                 self.should_return_to_menu = True
 
     def update(self, dt: float) -> Optional[ScreenName]:
@@ -45,12 +57,18 @@ class HighscoresScreen(Screen):
         surface.fill((0, 0, 0))
         width = surface.get_width()
 
-        title_surf = self.font_title.render("Highscores", True, COLOR_TITLE)
+        title_surf = self.font_title.render(
+            "Highscores", True, COLOR_TITLE
+        )
         title_rect = title_surf.get_rect(center=(width // 2, 60))
         surface.blit(title_surf, title_rect)
 
-        hint_surf = self.font_entry.render("Press ENTER/SPACE/ESC to return", True, (128, 128, 128))
-        hint_rect = hint_surf.get_rect(center=(width // 2, surface.get_height() - 40))
+        hint_surf = self.font_entry.render(
+            "Press ENTER/SPACE/ESC to return", True, COLOR_HINT
+        )
+        hint_rect = hint_surf.get_rect(
+            center=(width // 2, surface.get_height() - 40)
+        )
         surface.blit(hint_surf, hint_rect)
 
         if not self.scores:
@@ -62,9 +80,7 @@ class HighscoresScreen(Screen):
             return
 
         start_y = 140
-        # print(self.scores)
         for rank, entry in enumerate(self.scores, start=1):
-            # Si entry est {"name": "...", "score": ...}
             name = entry.get("name", "Unknown")
             score = entry.get("score", 0)
             line = f"{rank}. {name} - {score} pts"

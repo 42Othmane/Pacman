@@ -2,13 +2,14 @@
 
 Convention : coordonnées en (y, x).
 """
+import sys
+from typing import Any, Dict, Optional
 
-from maze.cell import PACGUM, SUPER_PACGUM
 from game.collectables import CollectibleManager
 from game.player import Player
 from game.scoring import Score
-from maze.loader import load_maze
-import sys
+from maze.cell import PACGUM, SUPER_PACGUM
+from maze.loader import Maze, load_maze
 
 STATE_PLAYING = "playing"
 STATE_PAUSED = "paused"
@@ -19,7 +20,8 @@ STATE_LOST = "lost"
 class Game:
     """Une partie complète : plusieurs niveaux, un score, des vies."""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
+        """Initialize the game with configuration."""
         self.config = config
         self.levels = config["levels"]
         self.max_time = float(config["level_max_time"])
@@ -34,9 +36,14 @@ class Game:
         self.level_index = 0
         self.state = STATE_PLAYING
         self.time_left = self.max_time
-        self.maze = None
-        self.collectibles = None
-        self.player = None
+
+        # Set for real by start_level() below, before any other
+        # method on this instance can run. Annotated Optional so mypy
+        # can verify every read site — see the guard (if self.xxx:)
+        # at the top of each method that dereferences them.
+        self.maze: Optional[Maze] = None
+        self.collectibles: Optional[CollectibleManager] = None
+        self.player: Optional[Player] = None
 
         self.move_interval = 0.25
         self.move_timer = 0.0
@@ -49,10 +56,7 @@ class Game:
             return False
         width = self.levels[index]["width"]
         height = self.levels[index]["height"]
-        if index == 0:
-            seed = self.config["seed"]
-        else:
-            seed = 0
+        seed = self.config["seed"] if index == 0 else 0
         maze = load_maze(width, height, seed)
         if maze is None:
             print("Maze couldn't be loaded", file=sys.stderr)
@@ -68,10 +72,14 @@ class Game:
         """Enregistre la direction souhaitée par le joueur."""
         if self.state != STATE_PLAYING:
             return
-        self.player.request_direction(direction)
+        if self.player:
+            self.player.request_direction(direction)
 
     def _step_player(self) -> None:
         """Avance le joueur d'une case et applique les conséquences."""
+        if not self.player or not self.collectibles:
+            return
+
         if not self.player.step():
             return
         y, x = self.player.position
@@ -84,10 +92,12 @@ class Game:
             self.next_level()
 
     def tick(self, delta: float) -> None:
+        """Update the game state by one frame."""
         if self.state != STATE_PLAYING:
             return
 
-        self.player.tick(delta, 1.0 / self.move_interval)
+        if self.player:
+            self.player.tick(delta, 1.0 / self.move_interval)
 
         self.move_timer += delta
         while self.move_timer >= self.move_interval:
@@ -98,7 +108,7 @@ class Game:
 
         self.time_left -= delta
         if self.time_left <= 0:
-            self.time_left = 0
+            self.time_left = 0.0
             self.player_caught()
             if self.state != STATE_LOST:
                 self.start_level(self.level_index)
@@ -106,6 +116,8 @@ class Game:
     def player_caught(self) -> None:
         """Le joueur a été touché par un fantôme."""
         if self.state != STATE_PLAYING:
+            return
+        if not self.player:
             return
         self.player.lose_life()
         self.lives = self.player.lives

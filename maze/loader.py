@@ -6,23 +6,26 @@ du jeu ne manipule que des objets Maze et Cell.
 """
 
 import sys
+from typing import List, Optional, Tuple
 
 from mazegenerator import MazeGenerator
 
 from maze.cell import Cell
 
+
 class Maze:
     """Un labyrinthe prêt à jouer : grille, spawn et coins."""
 
-    def __init__(self, grid: list[list[Cell]]) -> None:
+    def __init__(self, grid: List[List[Cell]]) -> None:
         self.grid = grid
         self.height = len(grid)
         self.width = len(grid[0])
-        self.spawn: tuple[int, int] = _find_spawn(grid)
-        self.corners: list[tuple[int, int]] = _find_corners(
-            self.height, self.width)
+        self.spawn: Tuple[int, int] = _find_spawn(grid)
+        self.corners: List[Tuple[int, int]] = _find_corners(
+            self.height, self.width
+        )
 
-    def cell_at(self, y: int, x: int) -> Cell | None:
+    def cell_at(self, y: int, x: int) -> Optional[Cell]:
         """Case en (y, x), ou None si hors grille."""
         if self.in_bounds(y, x):
             return self.grid[y][x]
@@ -34,7 +37,7 @@ class Maze:
         return 0 <= y < self.height and 0 <= x < self.width
 
 
-def _find_corners(height: int, width: int) -> list[tuple[int, int]]:
+def _find_corners(height: int, width: int) -> List[Tuple[int, int]]:
     """Les 4 coins de la grille, en (y, x)."""
     return [
         (0, 0),
@@ -44,7 +47,7 @@ def _find_corners(height: int, width: int) -> list[tuple[int, int]]:
     ]
 
 
-def _find_spawn(grid: list[list[Cell]]) -> tuple[int, int]:
+def _find_spawn(grid: List[List[Cell]]) -> Tuple[int, int]:
     """Case jouable la plus proche du centre, en (y, x).
 
     Le motif '42' occupe le centre avec des cases isolées : on cherche
@@ -69,10 +72,11 @@ def _find_spawn(grid: list[list[Cell]]) -> tuple[int, int]:
             if dist < best_dist:
                 best_dist = dist
                 best = (y, x)
-    
+
     return best
 
-def _to_grid(raw: list[list[int]]) -> list[list[Cell]]:
+
+def _to_grid(raw: List[List[int]]) -> List[List[Cell]]:
     """Convertit la grille d'entiers A-Maze-ing en grille de Cell."""
     return [[Cell.from_bitmask(v) for v in row] for row in raw]
 
@@ -88,12 +92,12 @@ def _is_valid_raw(raw: object) -> bool:
         elif len(row) != expected:
             return False
         for value in row:
-            if type(value) is not int:
+            if not isinstance(value, int):
                 return False
-    return True 
+    return True
 
 
-def load_maze(width: int, height: int, seed: int = 0) -> Maze | None:
+def load_maze(width: int, height: int, seed: int = 0) -> Optional[Maze]:
     """Génère un labyrinthe via A-Maze-ing.
 
     seed > 0 : génération déterministe (niveau 1).
@@ -115,11 +119,13 @@ def load_maze(width: int, height: int, seed: int = 0) -> Maze | None:
         return None
 
     if not _is_valid_raw(raw):
-        print("Maze generation returned an invalid grid",
-               file=sys.stderr)
+        print(
+            "Maze generation returned an invalid grid",
+            file=sys.stderr
+        )
         return None
     elif path is False:
         print("Maze has no path from entry to exit", file=sys.stderr)
         return None
-    
+
     return Maze(_to_grid(raw))

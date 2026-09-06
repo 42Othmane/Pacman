@@ -6,13 +6,13 @@ to the target cell. This is not optimal pathfinding (no backtracking
 out of dead ends), but keeps things simple as intended for a shared
 ghost behavior.
 """
-from typing import Optional
+from typing import Optional, Tuple, Dict, List
 
 import pygame
 
 # (dy, dx) offset for each maze direction, matching Cell.is_open()'s
 # convention (grid[y][x], "N"/"E"/"S"/"W").
-_DIRECTION_DELTAS: dict[str, tuple[int, int]] = {
+_DIRECTION_DELTAS: Dict[str, Tuple[int, int]] = {
     "N": (-1, 0),
     "S": (1, 0),
     "E": (0, 1),
@@ -34,7 +34,7 @@ class Ghost:
         normal_sprite: "pygame.Surface",
         vulnerable_sprite: "pygame.Surface",
     ) -> None:
-        """Initialize a ghost at the given pixel position (its corner spawn).
+        """Initialize a ghost at the given pixel position.
 
         Args:
             x: Center x position, in pixels. Also stored as the ghost's
@@ -54,10 +54,10 @@ class Ghost:
         self.normal_sprite = normal_sprite
         self.vulnerable_sprite = vulnerable_sprite
 
-        self.waypoint: Optional[tuple[float, float]] = None
+        self.waypoint: Optional[Tuple[float, float]] = None
         # Cell the ghost is currently leaving, excluded from candidates
         # in _choose_next_waypoint to prevent back-and-forth oscillation.
-        self.previous_cell: Optional[tuple[int, int]] = None
+        self.previous_cell: Optional[Tuple[int, int]] = None
 
         self.is_edible: bool = False
         self.is_eaten: bool = False
@@ -112,7 +112,7 @@ class Ghost:
 
     def _pixel_to_cell(
         self, tile_size: int, offset_x: int, offset_y: int
-    ) -> tuple[int, int]:
+    ) -> Tuple[int, int]:
         """Return the (cell_x, cell_y) the ghost currently occupies."""
         cell_x = int((self.x - offset_x) // tile_size)
         cell_y = int((self.y - offset_y) // tile_size)
@@ -120,8 +120,12 @@ class Ghost:
 
     @staticmethod
     def _cell_center_pixel(
-        cell_x: int, cell_y: int, tile_size: int, offset_x: int, offset_y: int
-    ) -> tuple[float, float]:
+        cell_x: int,
+        cell_y: int,
+        tile_size: int,
+        offset_x: int,
+        offset_y: int
+    ) -> Tuple[float, float]:
         """Return the pixel center of the given (cell_x, cell_y)."""
         px = offset_x + cell_x * tile_size + tile_size / 2
         py = offset_y + cell_y * tile_size + tile_size / 2
@@ -130,13 +134,12 @@ class Ghost:
     def _choose_next_waypoint(
         self,
         maze: object,
-        target_cell: tuple[int, int],
+        target_cell: Tuple[int, int],
         tile_size: int,
         offset_x: int,
         offset_y: int,
-    ) -> tuple[float, float]:
-        """Pick the open neighboring cell closest (or farthest, if
-        edible) to the target cell.
+    ) -> Tuple[float, float]:
+        """Pick the open neighboring cell closest (or farthest, if edible).
 
         Args:
             maze: The Maze object (grid[y][x], cell_at(y, x)).
@@ -151,21 +154,21 @@ class Ghost:
             (should not normally happen in a valid maze).
         """
         cell_x, cell_y = self._pixel_to_cell(tile_size, offset_x, offset_y)
-        current_cell = maze.cell_at(cell_y, cell_x)
+        current_cell = maze.cell_at(cell_y, cell_x)  # type: ignore
 
         target_y, target_x = target_cell
 
         if current_cell is None:
             return (self.x, self.y)
 
-        candidates: list[tuple[int, int]] = []
+        candidates: List[Tuple[int, int]] = []
         for direction, (dy, dx) in _DIRECTION_DELTAS.items():
             if not current_cell.is_open(direction):
                 continue
 
             neighbor_x = cell_x + dx
             neighbor_y = cell_y + dy
-            if maze.cell_at(neighbor_y, neighbor_x) is None:
+            if maze.cell_at(neighbor_y, neighbor_x) is None:  # type: ignore
                 continue
 
             candidates.append((neighbor_x, neighbor_y))
@@ -174,7 +177,7 @@ class Ghost:
         usable_candidates = non_backtrack if non_backtrack else candidates
 
         best_pixel = (self.x, self.y)
-        best_cell: Optional[tuple[int, int]] = None
+        best_cell: Optional[Tuple[int, int]] = None
         # When fleeing (edible), we want the FARTHEST neighbor, so start
         # from -inf; when chasing, we want the CLOSEST, so start from
         # +inf. Getting this initial value wrong silently breaks the
@@ -204,7 +207,7 @@ class Ghost:
         self,
         dt: float,
         maze: object,
-        target_cell: tuple[int, int],
+        target_cell: Tuple[int, int],
         tile_size: int,
         offset_x: int,
         offset_y: int,
