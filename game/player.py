@@ -3,9 +3,11 @@
 Convention : coordonnées en (y, x), y = ligne, x = colonne.
 """
 
+from typing import Dict, Tuple, Optional
+
 from maze.loader import Maze
 
-DELTAS = {
+DELTAS: Dict[str, Tuple[int, int]] = {
     "N": (-1, 0),
     "S": (1, 0),
     "E": (0, 1),
@@ -16,14 +18,15 @@ DELTAS = {
 class Player:
     """Pac-Man : sa position dans le labyrinthe et ses vies."""
 
-    def __init__(self, maze:  Maze, lives: int) -> None:
+    def __init__(self, maze: Maze, lives: int) -> None:
+        """Initialize the player at the maze spawn."""
         self.maze = maze
         self.lives = lives
         self.y, self.x = maze.spawn
         self.direction = "E"
         self.prev_y, self.prev_x = self.y, self.x
         self.move_progress: float = 1.0
-        self.next_direction: str | None = None
+        self.next_direction: Optional[str] = None
 
     def request_direction(self, direction: str) -> None:
         """Enregistre la direction souhaitée par le joueur.
@@ -33,14 +36,15 @@ class Player:
         if direction in DELTAS:
             self.next_direction = direction
 
-
     def step(self) -> bool:
         """Avance d'une case. True si le joueur a bougé."""
-        if self.next_direction is not None and self.can_move(self.next_direction):
+        if (
+            self.next_direction is not None
+            and self.can_move(self.next_direction)
+        ):
             self.direction = self.next_direction
             self.next_direction = None
         return self.move(self.direction)
-
 
     def tick(self, delta: float, speed: float) -> None:
         """Fait progresser l'animation de déplacement.
@@ -51,14 +55,12 @@ class Player:
             self.move_progress = min(1.0, self.move_progress + delta * speed)
 
     @property
-    def position(self) -> tuple[int, int]:
+    def position(self) -> Tuple[int, int]:
         """Position courante en (y, x)."""
         return (self.y, self.x)
-        
 
     def can_move(self, direction: str) -> bool:
         """True si le déplacement est possible depuis la case courante."""
-        
         if direction not in DELTAS:
             return False
         dy, dx = DELTAS[direction]
@@ -86,7 +88,6 @@ class Player:
         self.move_progress = 1.0
         self.direction = "E"
         self.next_direction = None
-
 
     def is_game_over(self) -> bool:
         """True si le joueur n'a plus de vies."""

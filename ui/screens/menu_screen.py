@@ -3,16 +3,17 @@
 Displays: Start Game / View Highscores / Instructions / Exit.
 """
 from typing import Optional
+
 import pygame
+
 from ui.screens.base import Screen, ScreenName
 
-
 COLOR_BACKGROUND = (0, 0, 0)
-COLOR_TITLE = (255, 255, 0)        # Pac-Man yellow
-COLOR_GHOST_ACCENT = (255, 0, 0)   # classic Blinky red, used as a border
-COLOR_OPTION = (255, 255, 255)     # unselected option text
+COLOR_TITLE = (255, 255, 0)         # Pac-Man yellow
+COLOR_GHOST_ACCENT = (255, 0, 0)    # classic Blinky red, border accent
+COLOR_OPTION = (255, 255, 255)      # unselected option text
 COLOR_OPTION_SELECTED = (255, 255, 0)  # selected option text
-COLOR_DOT = (255, 184, 174)        # soft pink, pacgum-style decoration
+COLOR_DOT = (255, 184, 174)         # soft pink, pacgum-style decoration
 
 FONT_SIZE_TITLE = 64
 FONT_SIZE_OPTION = 36
@@ -28,8 +29,6 @@ class MenuScreen(Screen):
         self.selected_option: Optional[str] = None
         self.font_title = pygame.font.Font(None, FONT_SIZE_TITLE)
         self.font_option = pygame.font.Font(None, FONT_SIZE_OPTION)
-        # self.highscore = load_highscores("config.example.json")
-        pass
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle menu navigation input (select Start/Highscores/etc.)."""
@@ -42,7 +41,7 @@ class MenuScreen(Screen):
                 self.selected_option = self.options[self.index]
 
     def update(self, dt: float) -> Optional[ScreenName]:
-        """Return PLAYING when Start is chosen, else stay on MENU."""
+        """Return the target screen for the selected option, else None."""
         if self.selected_option == "Start Game":
             self.selected_option = None
             return ScreenName.PLAYING
@@ -55,35 +54,37 @@ class MenuScreen(Screen):
         elif self.selected_option == "Exit":
             return ScreenName.EXIT
         return None
-    
+
     def reset(self) -> None:
         """Reset the menu to its initial state (called on re-entry)."""
         self.index = 0
         self.selected_option = None
 
-    def draw(self, surface: "pygame.Surface") -> None:
+    def draw(self, surface: pygame.Surface) -> None:
         """Draw the Pac-Man themed main menu.
 
         Layout, top to bottom:
             1. Black background.
-            2. A yellow Pac-Man icon (circle with a wedge mouth) above the
-            title, so it reads as a logo rather than plain text.
+            2. A yellow Pac-Man icon (circle with a wedge mouth) above
+               the title, so it reads as a logo rather than plain
+               text.
             3. The "PAC-MAN" title.
-            4. A row of small dots as a separator (echoes in-game pacgums).
+            4. A row of small dots as a separator (echoes in-game
+               pacgums).
             5. The menu options, with the selected one highlighted in
-            yellow and prefixed by a small Pac-Man marker instead of a
-            generic arrow/cursor — keeps the whole screen on-theme.
+               yellow and prefixed by a small Pac-Man marker instead
+               of a generic arrow/cursor — keeps the whole screen
+               on-theme.
         """
         width = surface.get_width()
 
-        # 1. Background
         surface.fill(COLOR_BACKGROUND)
 
-        # 2. Pac-Man icon: a yellow circle with a black wedge cut out as
+        # Pac-Man icon: a yellow circle with a black wedge cut out as
         # the mouth. Drawn as a filled circle + a filled black triangle
         # overlapping it — same "manual shape drawing" category as
-        # draw.rect/draw.circle already approved in your MLX-subset notes;
-        # document draw.polygon there too if you keep this mouth technique.
+        # draw.rect/draw.circle already approved in the MLX-subset
+        # notes; document draw.polygon there too if kept.
         icon_center = (width // 2, 90)
         icon_radius = 40
         pygame.draw.circle(surface, COLOR_TITLE, icon_center, icon_radius)
@@ -94,12 +95,11 @@ class MenuScreen(Screen):
         ]
         pygame.draw.polygon(surface, COLOR_BACKGROUND, mouth)
 
-        # 3. Title
         title_surf = self.font_title.render("PAC-MAN", True, COLOR_TITLE)
         title_rect = title_surf.get_rect(center=(width // 2, 160))
         surface.blit(title_surf, title_rect)
 
-        # 4. Decorative dot separator (evokes pacgums lining a corridor)
+        # Decorative dot separator (evokes pacgums lining a corridor).
         dot_y = 200
         dot_spacing = 18
         dot_count = 9
@@ -109,7 +109,6 @@ class MenuScreen(Screen):
                 surface, COLOR_DOT, (start_x + i * dot_spacing, dot_y), 3
             )
 
-        # 5. Menu options
         start_y = 260
         spacing = 60
         for i, option in enumerate(self.options):
@@ -122,13 +121,15 @@ class MenuScreen(Screen):
             surface.blit(option_surf, option_rect)
 
             if is_selected:
-                # Small Pac-Man marker to the left of the selected option,
-                # instead of a plain ">" cursor, to stay on theme.
                 marker_center = (option_rect.left - 24, option_rect.centery)
-                pygame.draw.circle(surface, COLOR_TITLE, marker_center, 8)
+                pygame.draw.circle(
+                    surface, COLOR_TITLE, marker_center, 8
+                )
                 marker_mouth = [
                     marker_center,
                     (marker_center[0] + 8, marker_center[1] - 4),
                     (marker_center[0] + 8, marker_center[1] + 4),
                 ]
-                pygame.draw.polygon(surface, COLOR_BACKGROUND, marker_mouth)
+                pygame.draw.polygon(
+                    surface, COLOR_BACKGROUND, marker_mouth
+                )

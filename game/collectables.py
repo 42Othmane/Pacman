@@ -4,10 +4,10 @@ Convention : coordonnées en (y, x), y = ligne, x = colonne.
 Les collectibles sont stockés dans les Cell du labyrinthe ; ce
 manager ne fait que les placer et compter ce qui a été mangé.
 """
-
 import random
+from typing import List, Optional, Tuple
 
-from maze.cell import EMPTY, PACGUM, SUPER_PACGUM
+from maze.cell import EMPTY, PACGUM, SUPER_PACGUM, Cell
 from maze.loader import Maze
 
 
@@ -15,9 +15,11 @@ class CollectibleManager:
     """Place les pacgums dans le labyrinthe et suit leur consommation."""
 
     def __init__(self, maze: Maze, pacgum_count: int) -> None:
-        """maze : labyrinthe à peupler.
+        """Initialize with a maze and desired number of pacgums.
 
-        pacgum_count : nombre de pacgums simples souhaité (config).
+        Args:
+            maze: Labyrinthe à peupler.
+            pacgum_count: Nombre de pacgums simples souhaité (config).
         """
         self.maze = maze
         self.pacgums_eaten = 0
@@ -30,7 +32,8 @@ class CollectibleManager:
     def _place_super_pacgums(self) -> int:
         """Pose un super-pacgum dans chaque coin.
 
-        Retourne le nombre réellement posé.
+        Returns:
+            Nombre réellement posé.
         """
         count = 0
         corners = self.maze.corners
@@ -40,13 +43,13 @@ class CollectibleManager:
             count += 1
         return count
 
-    def _eligible_cells(self) -> list[tuple[int, int]]:
+    def _eligible_cells(self) -> List[Tuple[int, int]]:
         """Cases pouvant recevoir un pacgum simple.
 
         Exclut les cases isolées du motif '42', celles déjà
         occupées, et la case de spawn du joueur.
         """
-        eligible = []
+        eligible: List[Tuple[int, int]] = []
         for y in range(self.maze.height):
             for x in range(self.maze.width):
                 cell = self.maze.grid[y][x]
@@ -62,7 +65,8 @@ class CollectibleManager:
     def _place_pacgums(self, wanted: int) -> int:
         """Tire au sort et pose les pacgums simples.
 
-        Retourne le nombre réellement posé.
+        Returns:
+            Nombre réellement posé.
         """
         eligible = self._eligible_cells()
         count = min(wanted, len(eligible))
@@ -73,9 +77,10 @@ class CollectibleManager:
     def eat(self, y: int, x: int) -> int:
         """Consomme le collectible en (y, x).
 
-        Retourne PACGUM, SUPER_PACGUM, ou EMPTY si rien.
+        Returns:
+            PACGUM, SUPER_PACGUM, ou EMPTY si rien.
         """
-        cell = self.maze.cell_at(y, x)
+        cell: Optional[Cell] = self.maze.cell_at(y, x)
         if cell is None:
             return EMPTY
         eaten = cell.take_gum()
@@ -84,5 +89,5 @@ class CollectibleManager:
         return eaten
 
     def are_all_eaten(self) -> bool:
-        """True si tous les collectibles ont été mangés."""
+        """Return True si tous les collectibles ont été mangés."""
         return self.pacgums_eaten == self.total_pacgums
