@@ -9,11 +9,11 @@ import pygame
 from ui.screens.base import Screen, ScreenName
 
 COLOR_BACKGROUND = (0, 0, 0)
-COLOR_TITLE = (255, 255, 0)         # Pac-Man yellow
-COLOR_GHOST_ACCENT = (255, 0, 0)    # classic Blinky red, border accent
-COLOR_OPTION = (255, 255, 255)      # unselected option text
-COLOR_OPTION_SELECTED = (255, 255, 0)  # selected option text
-COLOR_DOT = (255, 184, 174)         # soft pink, pacgum-style decoration
+COLOR_TITLE = (255, 255, 0)
+COLOR_GHOST_ACCENT = (255, 0, 0)
+COLOR_OPTION = (255, 255, 255)
+COLOR_OPTION_SELECTED = (255, 255, 0)
+COLOR_DOT = (255, 184, 174)
 
 FONT_SIZE_TITLE = 64
 FONT_SIZE_OPTION = 36
@@ -80,11 +80,6 @@ class MenuScreen(Screen):
 
         surface.fill(COLOR_BACKGROUND)
 
-        # Pac-Man icon: a yellow circle with a black wedge cut out as
-        # the mouth. Drawn as a filled circle + a filled black triangle
-        # overlapping it — same "manual shape drawing" category as
-        # draw.rect/draw.circle already approved in the MLX-subset
-        # notes; document draw.polygon there too if kept.
         icon_center = (width // 2, 90)
         icon_radius = 40
         pygame.draw.circle(surface, COLOR_TITLE, icon_center, icon_radius)
@@ -99,7 +94,6 @@ class MenuScreen(Screen):
         title_rect = title_surf.get_rect(center=(width // 2, 160))
         surface.blit(title_surf, title_rect)
 
-        # Decorative dot separator (evokes pacgums lining a corridor).
         dot_y = 200
         dot_spacing = 18
         dot_count = 9

@@ -10,8 +10,7 @@ from typing import Optional, Tuple, Dict, List
 
 import pygame
 
-# (dy, dx) offset for each maze direction, matching Cell.is_open()'s
-# convention (grid[y][x], "N"/"E"/"S"/"W").
+
 _DIRECTION_DELTAS: Dict[str, Tuple[int, int]] = {
     "N": (-1, 0),
     "S": (1, 0),
@@ -20,8 +19,8 @@ _DIRECTION_DELTAS: Dict[str, Tuple[int, int]] = {
 }
 
 SPEED_TILES_PER_SECOND = 3.0
-ARRIVAL_EPSILON = 1.0  # pixels; below this, snap to the waypoint
-RESPAWN_DELAY = 5.0  # seconds before an eaten ghost respawns
+ARRIVAL_EPSILON = 1.0
+RESPAWN_DELAY = 5.0
 
 
 class Ghost:
@@ -55,8 +54,6 @@ class Ghost:
         self.vulnerable_sprite = vulnerable_sprite
 
         self.waypoint: Optional[Tuple[float, float]] = None
-        # Cell the ghost is currently leaving, excluded from candidates
-        # in _choose_next_waypoint to prevent back-and-forth oscillation.
         self.previous_cell: Optional[Tuple[int, int]] = None
 
         self.is_edible: bool = False
@@ -178,10 +175,6 @@ class Ghost:
 
         best_pixel = (self.x, self.y)
         best_cell: Optional[Tuple[int, int]] = None
-        # When fleeing (edible), we want the FARTHEST neighbor, so start
-        # from -inf; when chasing, we want the CLOSEST, so start from
-        # +inf. Getting this initial value wrong silently breaks the
-        # comparison below (nothing ever looks "better").
         best_distance = float("-inf") if self.is_edible else float("inf")
 
         for neighbor_x, neighbor_y in usable_candidates:
@@ -249,7 +242,10 @@ class Ghost:
             self.waypoint = None
             return
 
-        speed = tile_size * SPEED_TILES_PER_SECOND
+        if not self.is_edible:
+            speed = tile_size * SPEED_TILES_PER_SECOND
+        else:
+            speed = tile_size * (SPEED_TILES_PER_SECOND * 0.6)
         step = speed * dt
 
         if step >= distance:

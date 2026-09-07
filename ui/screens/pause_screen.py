@@ -9,7 +9,7 @@ import pygame
 
 from ui.screens.base import Screen, ScreenName
 
-COLOR_OVERLAY = (0, 0, 0, 180)       # black, semi-transparent
+COLOR_OVERLAY = (0, 0, 0, 180)
 COLOR_TITLE = (100, 100, 255)
 COLOR_OPTION = (255, 255, 255)
 COLOR_OPTION_SELECTED = (255, 255, 0)
