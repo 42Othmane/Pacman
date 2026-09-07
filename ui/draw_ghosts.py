@@ -20,9 +20,6 @@ if TYPE_CHECKING:
 
 SPRITE_DIR = "assets/sprites"
 
-# Order matches the 4 corners as produced by Maze.corners
-# (top-left, top-right, bottom-left, bottom-right) — adjust if your
-# corner order differs.
 GHOST_COLORS = ["red", "pink", "blue", "green"]
 VULNERABLE_SPRITE_FILENAME = "vulnerable-ghost.png"
 
