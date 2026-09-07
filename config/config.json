@@ -1,13 +1,6 @@
 {
-    # Lines starting with '#' are comments and are stripped before JSON parsing.
-    # This file only illustrates the keys: it is not strict JSON, your
-    # loader must support this comment style (see config_loader.py).
-
     "highscore_filename": "highscore.json",
 
-    # One entry per level. If the array is shorter than the number of
-    # levels required (>= 10), missing levels reuse the last entry
-    # with a randomly generated maze (see spec 6.1 / 5.4).
     "levels": [
         { "width": 10, "height": 10 }
     ],
