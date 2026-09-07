@@ -14,13 +14,6 @@ import pygame
 SPRITE_PATH = os.path.join("assets", "pacman.png")
 FRAME_COUNT = 6
 
-# Sprites are drawn facing East; rotate counter-clockwise from there.
-#
-# West is deliberately absent. Rotating East by 180 degrees does point
-# the mouth left, but it also turns the sprite upside down — the eye
-# ends up at the bottom. West is built with a horizontal flip instead
-# (see load_player_frames), which swaps left and right while leaving
-# top and bottom alone.
 DIRECTION_ANGLES: dict[str, int] = {"E": 0, "N": 90, "S": 270}
 
 
