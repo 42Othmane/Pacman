@@ -7,9 +7,6 @@ from pathlib import Path
 MAX_NAME_LENGTH = 10
 TOP_N = 10
 
-# Every stored entry is {"name": str, "score": int} — shared here so
-# callers (RenderLoop, ScoreEntryScreen, HighscoresScreen) all agree
-# on the exact same type instead of each re-declaring their own.
 HighscoreEntry = dict[str, str | int]
 
 

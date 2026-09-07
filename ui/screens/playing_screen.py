@@ -16,7 +16,6 @@ from game.player import Player
 from maze.cell import PACGUM, SUPER_PACGUM
 from maze.loader import load_maze
 
-# --- Colors (classic Pac-Man palette) ---
 COLOR_BACKGROUND = (0, 0, 0)
 COLOR_WALL = (33, 33, 222)
 COLOR_PACGUM = (255, 222, 173)
@@ -25,53 +24,33 @@ COLOR_42_PATTERN = (255, 255, 0)
 
 WALL_THICKNESS = 1
 
-# Collectible sizes are expressed as a fraction of the tile, not in
-# fixed pixels: mazes grow every level, so tile_size shrinks, and a
-# hard-coded 8px super-pacgum would eventually overflow its own cell.
-# The minimums keep both dots visible on very small tiles.
 PACGUM_RADIUS_RATIO = 0.10
 SUPER_PACGUM_RADIUS_RATIO = 0.28
 PACGUM_MIN_RADIUS = 1
 SUPER_PACGUM_MIN_RADIUS = 3
 
-HUD_HEIGHT = 60  # reserved band at the top for score/lives/level/timer
+HUD_HEIGHT = 60
 
-# --- HUD (spec 6.8) ---
 FONT_SIZE_HUD = 24
 FONT_SIZE_CHEAT = 18
 HUD_PADDING_X = 16
 HUD_LINE_1_Y = 10
 HUD_LINE_2_Y = 36
 COLOR_HUD_TEXT = (255, 255, 255)
-COLOR_HUD_WARNING = (255, 80, 80)   # timer under TIMER_WARNING_SECONDS
+COLOR_HUD_WARNING = (255, 80, 80)
 COLOR_CHEAT_TEXT = (255, 140, 0)
 TIMER_WARNING_SECONDS = 10.0
 
 DEBUG_KILL_GHOSTS_KEY = pygame.K_k
 
-# --- Player (Lot A) ---
 COLOR_PLAYER = (255, 255, 0)
 
-# Seconds between two cell steps. 0.25 -> 4 cells/second, slightly
-# faster than the ghosts (SPEED_TILES_PER_SECOND = 3.0).
 PLAYER_MOVE_INTERVAL = 0.25
-
-# Cheat F5: roughly 2.5x the normal pace.
 CHEAT_MOVE_INTERVAL = 0.10
-
-# Seconds of invulnerability granted right after respawning, so a ghost
-# camping on the spawn cell cannot drain every life in a few frames.
 RESPAWN_INVINCIBILITY = 2.0
-
-# Spec 6.4: how long ghosts stay edible after a super-pacgum. Used as
-# the fallback when the config does not carry its own value.
 SUPER_PACGUM_DURATION = 8.0
-
-# Mouth animation: full open/close cycle per cell step, so the chomp
-# lines up with the movement.
 PLAYER_ANIMATION_FPS = FRAME_COUNT * 2
 
-# Arrow keys and ZQSD/WASD, mapped to Cell.is_open() directions.
 MOVEMENT_KEYS: dict[int, str] = {
     pygame.K_UP: "N", pygame.K_DOWN: "S",
     pygame.K_RIGHT: "E", pygame.K_LEFT: "W",
@@ -81,14 +60,13 @@ MOVEMENT_KEYS: dict[int, str] = {
     pygame.K_q: "W", pygame.K_a: "W",
 }
 
-# --- Cheat mode (spec 6.5) ---
 CHEAT_INVINCIBLE_KEY = pygame.K_F1
 CHEAT_SKIP_LEVEL_KEY = pygame.K_F2
 CHEAT_FREEZE_GHOSTS_KEY = pygame.K_F3
 CHEAT_ADD_LIFE_KEY = pygame.K_F4
 CHEAT_SPEED_KEY = pygame.K_F5
 
-LEVEL_TRANSITION_DURATION = 2.0  # seconds; temporary, tune as needed
+LEVEL_TRANSITION_DURATION = 2.0
 COLOR_TRANSITION_TEXT = (255, 255, 255)
 FONT_SIZE_TRANSITION = 48
 
@@ -115,41 +93,24 @@ class PlayingScreen(Screen):
         self.window_width = window_width
         self.window_height = window_height
 
-        # Persist across levels (spec 6.7) — only set here, never in
-        # _setup_level(), so they survive level transitions.
-        #
-        # Lives are NOT stored here: Player owns them (single source of
-        # truth). starting_lives is only the value handed to the very
-        # first Player; _setup_level() carries the current count over.
         self.starting_lives = config["lives"]
         self.points_per_pacgum = config["points_per_pacgum"]
         self.points_per_super_pacgum = config["points_per_super_pacgum"]
         self.points_per_ghost = config["points_per_ghost"]
         self.score = 0
 
-        # Spec 6.4. Optional config key, so an older config.json still
-        # loads and simply falls back to the module default.
         self.super_pacgum_duration = float(
             config.get("super_pacgum_duration", SUPER_PACGUM_DURATION)
         )
-        # Seconds left in the current "ghosts are edible" window; 0.0
-        # means no super-pacgum is active.
         self.edible_timer = 0.0
-        # How many ghosts have already been eaten in the current
-        # window. Each one is worth twice the previous (spec 6.4's
-        # classic scoring: 1x, 2x, 4x, 8x points_per_ghost).
         self.ghost_chain = 0
 
-        # Cheat mode state (spec 6.5). Also persists across levels.
         self.cheat_invincible = False
         self.cheat_freeze_ghosts = False
         self.cheat_speed = False
 
-        # Temporary invulnerability after a respawn; independent of the
-        # F1 cheat, which is a permanent toggle.
         self.invincible_timer = 0.0
 
-        # Seconds between two player steps; swapped by the F5 cheat.
         self.move_interval = PLAYER_MOVE_INTERVAL
 
         self._setup_level(level_index)
@@ -159,16 +120,12 @@ class PlayingScreen(Screen):
         self.font_hud = pygame.font.Font(None, FONT_SIZE_HUD)
         self.font_cheat = pygame.font.Font(None, FONT_SIZE_CHEAT)
 
-        # Accumulates dt until a full move_interval has elapsed, at
-        # which point the player advances by one cell.
         self.move_timer = 0.0
 
     @property
     def lives(self) -> int:
         """Remaining lives, read from the Player (single source)."""
         return self.player.lives
-
-    # --- Level setup / progression ---------------------------------
 
     def _setup_level(self, level_index: int) -> None:
         """Load and configure everything specific to a single level.
@@ -183,7 +140,6 @@ class PlayingScreen(Screen):
         self.level_index = level_index
         level_spec = self.config["levels"][level_index]
 
-        # Spec 6.1: level 1 uses the fixed seed, later levels are random.
         seed = self.config["seed"] if level_index == 0 else 0
 
         maze = load_maze(
@@ -197,7 +153,6 @@ class PlayingScreen(Screen):
             )
         self.maze = maze
 
-        # Recomputed every level, since maze dimensions grow each time.
         playable_height = self.window_height - HUD_HEIGHT
         self.tile_size = min(
             self.window_width // self.maze.width,
@@ -207,8 +162,6 @@ class PlayingScreen(Screen):
         self.offset_x = (self.window_width - maze_pixel_width) // 2
         self.offset_y = HUD_HEIGHT
 
-        # Recomputed with tile_size so the dots keep the same visual
-        # weight whatever the maze size.
         self.pacgum_radius = max(
             PACGUM_MIN_RADIUS, round(self.tile_size * PACGUM_RADIUS_RATIO)
         )
@@ -217,7 +170,6 @@ class PlayingScreen(Screen):
             round(self.tile_size * SUPER_PACGUM_RADIUS_RATIO),
         )
 
-        # Depends on tile_size, so it must be reloaded every level.
         self.player_frames = load_player_frames(self.tile_size)
         self.animation_timer = 0.0
 
@@ -227,20 +179,13 @@ class PlayingScreen(Screen):
             px, py = self._cell_pixel_pos(corner_x, corner_y)
             center_x = px + self.tile_size // 2
             center_y = py + self.tile_size // 2
-            # Ghost stores this position as its own spawn_x/spawn_y, so
-            # there is no need to keep a separate spawn table here.
             self.ghosts.append(
                 Ghost(center_x, center_y, ghost_sprites[i], vulnerable_sprite)
             )
 
-        # Lot A owns gum placement and the player; the screen only
-        # renders them and forwards input.
         self.collectibles = CollectibleManager(
             self.maze, self.config["pacgum"]
         )
-        # Carry the current life count over to the new level's Player.
-        # On the very first call there is no player yet, so fall back to
-        # the configured starting value.
         previous_player = getattr(self, "player", None)
         self.player = Player(
             self.maze,
@@ -267,8 +212,6 @@ class PlayingScreen(Screen):
             self.collectibles.total_pacgums
             - self.collectibles.pacgums_eaten
         )
-
-    # --- Coordinate helpers ------------------------------------------
 
     def _cell_pixel_pos(self, x: int, y: int) -> tuple[int, int]:
         """Top-left pixel coordinates of the cell at grid position (x, y).
@@ -304,8 +247,6 @@ class PlayingScreen(Screen):
         column = int((ghost.x - self.offset_x) // self.tile_size)
         row = int((ghost.y - self.offset_y) // self.tile_size)
         return row, column
-
-    # --- Player ------------------------------------------------------
 
     def _update_player(self, dt: float) -> None:
         """Advance the player and apply what it walks over.
@@ -391,7 +332,6 @@ class PlayingScreen(Screen):
         """
         self.player.request_direction(direction)
 
-        # Mid-cell: let the buffered request apply on arrival.
         if self.player.move_progress < 1.0:
             return
         if not self.player.can_move(direction):
@@ -399,8 +339,6 @@ class PlayingScreen(Screen):
 
         if self.player.step():
             self._eat_at_player()
-            # Restart the cadence from this step, so the next one is a
-            # full interval away rather than arriving early.
             self.move_timer = 0.0
 
     def _is_protected(self) -> bool:
@@ -427,7 +365,6 @@ class PlayingScreen(Screen):
         """
         self.player.lose_life()
         self._reset_ghost_positions()
-        # Being caught cancels any super-pacgum in progress.
         self._end_edible_window()
         self.invincible_timer = RESPAWN_INVINCIBILITY
         self.move_timer = 0.0
@@ -447,14 +384,11 @@ class PlayingScreen(Screen):
                 continue
             if ghost.is_edible:
                 ghost.get_eaten()
-                # 1x, 2x, 4x, 8x for consecutive ghosts in one window.
                 self.score += self.points_per_ghost * (2 ** self.ghost_chain)
                 self.ghost_chain += 1
             elif not self._is_protected():
                 self._lose_life()
                 return
-
-    # --- Cheat mode (spec 6.5) ----------------------------------------
 
     def _handle_cheat_key(self, key: int) -> bool:
         """Apply a cheat-mode hotkey.
@@ -468,8 +402,6 @@ class PlayingScreen(Screen):
         if key == CHEAT_INVINCIBLE_KEY:
             self.cheat_invincible = not self.cheat_invincible
         elif key == CHEAT_SKIP_LEVEL_KEY:
-            # Reuse the normal level-complete path so the transition
-            # message and the VICTORY check behave identically.
             if self.transition_timer is None:
                 self.transition_timer = LEVEL_TRANSITION_DURATION
         elif key == CHEAT_FREEZE_GHOSTS_KEY:
@@ -499,8 +431,6 @@ class PlayingScreen(Screen):
             active[0] = "CHEATS: " + active[0]
         return active
 
-    # --- Screen interface ---------------------------------------------
-
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle pause, movement, cheat-mode and debug hotkeys."""
         if event.type != pygame.KEYDOWN:
@@ -512,18 +442,7 @@ class PlayingScreen(Screen):
         if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
             self._pause_requested = True
         elif event.key in MOVEMENT_KEYS:
-            # Lot A's Player keeps the request until the passage opens
-            # up, so turns can be buffered before a junction.
             self._request_direction(MOVEMENT_KEYS[event.key])
-        elif event.key == DEBUG_KILL_GHOSTS_KEY:
-            # TEMPORARY debug helper, kept alongside the official
-            # cheats: instantly eats every ghost on screen.
-            for ghost in self.ghosts:
-                if not ghost.is_eaten:
-                    ghost.get_eaten()
-        elif event.key == pygame.K_r:
-            for ghost in self.ghosts:
-                ghost.is_edible = not ghost.is_edible
 
     def update(self, dt: float) -> Optional[ScreenName]:
         """Advance gameplay; detect pause/game-over/victory.
@@ -538,8 +457,6 @@ class PlayingScreen(Screen):
             self._pause_requested = False
             return ScreenName.PAUSED
 
-        # If a level-complete transition is active, only tick it down —
-        # freeze gameplay (ghosts, timer) until it finishes.
         if self.transition_timer is not None:
             self.transition_timer -= dt
             if self.transition_timer <= 0:
@@ -555,8 +472,6 @@ class PlayingScreen(Screen):
         if self.invincible_timer > 0.0:
             self.invincible_timer = max(0.0, self.invincible_timer - dt)
 
-        # Runs before the player, so a super-pacgum eaten this frame
-        # keeps its full duration instead of losing one frame of it.
         self._update_edible_window(dt)
 
         self._update_player(dt)
@@ -576,8 +491,6 @@ class PlayingScreen(Screen):
 
         self.time_remaining -= dt
         if self.time_remaining <= 0:
-            # Spec 6.7: running out of time costs a life and restarts
-            # the level's clock, exactly like being caught by a ghost.
             self._lose_life()
             self.time_remaining = float(self.config["level_max_time"])
 
@@ -585,9 +498,6 @@ class PlayingScreen(Screen):
             return ScreenName.GAME_OVER
 
         if self._count_remaining_gums() == 0:
-            # Start the transition instead of switching immediately —
-            # _load_next_level()/VICTORY only happen once the timer
-            # above runs out.
             self.transition_timer = LEVEL_TRANSITION_DURATION
 
         return None
@@ -602,8 +512,6 @@ class PlayingScreen(Screen):
 
         if self.transition_timer is not None:
             self._draw_transition_message(surface)
-
-    # --- HUD (spec 6.8) ------------------------------------------------
 
     @staticmethod
     def _format_time(seconds: float) -> str:
@@ -623,7 +531,6 @@ class PlayingScreen(Screen):
         Args:
             surface: The pygame surface to draw on.
         """
-        # Line 1: score (left), lives, level, time (right).
         score_surf = self.font_hud.render(
             f"SCORE {self.score}", True, COLOR_HUD_TEXT
         )
@@ -659,9 +566,6 @@ class PlayingScreen(Screen):
              HUD_LINE_1_Y),
         )
 
-        # Line 2: the super-pacgum countdown, then any active cheats so
-        # a reviewer can see at a glance that the run is not a
-        # legitimate one (spec 6.5).
         labels = []
         if self.edible_timer > 0.0:
             labels.append(f"EDIBLE {self.edible_timer:.1f}s")
@@ -686,8 +590,6 @@ class PlayingScreen(Screen):
         Args:
             surface: The pygame surface to draw on.
         """
-        # Blink while the respawn grace period is running, so the state
-        # is readable without looking at the HUD.
         if self.invincible_timer > 0.0 and int(
             self.invincible_timer * 8
         ) % 2 == 0:
@@ -711,7 +613,6 @@ class PlayingScreen(Screen):
             )
             return
 
-        # Freeze on the closed-mouth frame while standing still.
         if self.player.move_progress >= 1.0:
             frame_index = 0
         else:
@@ -723,7 +624,7 @@ class PlayingScreen(Screen):
         surface.blit(sprite, sprite.get_rect(center=(center_x, center_y)))
 
     def _draw_transition_message(self, surface: pygame.Surface) -> None:
-        """Draw the 'Level Complete' message with a semi-transparent background.
+        """Draw the 'Level Complete' message with a semi-opacity background.
 
         Args:
             surface: The pygame surface to draw on.
@@ -731,12 +632,10 @@ class PlayingScreen(Screen):
         width = surface.get_width()
         height = surface.get_height()
 
-        # Fond semi-transparent pour améliorer la lisibilité
         overlay = pygame.Surface((width, height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
         surface.blit(overlay, (0, 0))
 
-        # Message "Level X Complete !"
         text = f"Level {self.level_index + 1} Complete !"
         text_surf = self.font_transition.render(
             text, True, COLOR_TRANSITION_TEXT
