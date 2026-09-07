@@ -89,7 +89,7 @@ CHEAT_ADD_LIFE_KEY = pygame.K_F4
 CHEAT_SPEED_KEY = pygame.K_F5
 
 LEVEL_TRANSITION_DURATION = 2.0  # seconds; temporary, tune as needed
-COLOR_TRANSITION_TEXT = (255, 255, 0)
+COLOR_TRANSITION_TEXT = (255, 255, 255)
 FONT_SIZE_TRANSITION = 48
 
 
@@ -723,17 +723,26 @@ class PlayingScreen(Screen):
         surface.blit(sprite, sprite.get_rect(center=(center_x, center_y)))
 
     def _draw_transition_message(self, surface: pygame.Surface) -> None:
-        """Draw the 'Level Complete' message during a level transition.
+        """Draw the 'Level Complete' message with a semi-transparent background.
 
         Args:
             surface: The pygame surface to draw on.
         """
-        text = f"Level {self.level_index + 1} Complete!"
+        width = surface.get_width()
+        height = surface.get_height()
+
+        # Fond semi-transparent pour améliorer la lisibilité
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        # Message "Level X Complete !"
+        text = f"Level {self.level_index + 1} Complete !"
         text_surf = self.font_transition.render(
             text, True, COLOR_TRANSITION_TEXT
         )
         text_rect = text_surf.get_rect(
-            center=(surface.get_width() // 2, surface.get_height() // 2)
+            center=(width // 2, height // 2)
         )
         surface.blit(text_surf, text_rect)
 
