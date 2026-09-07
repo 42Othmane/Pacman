@@ -11,15 +11,21 @@ has no direct MLX equivalent — it is used here only once at load time
 (pre-processing), not per frame, but flag this choice in the README
 (Implementation section) for the peer review.
 """
+import os
 from typing import TYPE_CHECKING
 
 import pygame
 
+from resources import resource_path
+
 if TYPE_CHECKING:
     from game.ghost import Ghost
 
-SPRITE_DIR = "assets/sprites"
+SPRITE_DIR = resource_path(os.path.join("assets", "sprites"))
 
+# Order matches the 4 corners as produced by Maze.corners
+# (top-left, top-right, bottom-left, bottom-right) — adjust if your
+# corner order differs.
 GHOST_COLORS = ["red", "pink", "blue", "green"]
 VULNERABLE_SPRITE_FILENAME = "vulnerable-ghost.png"
 
@@ -43,12 +49,14 @@ def load_ghost_sprites(
     """
     normal_sprites = []
     for color in GHOST_COLORS:
-        path = f"{SPRITE_DIR}/{color}ghost.png"
+        path = os.path.join(SPRITE_DIR, f"{color}ghost.png")
         raw = pygame.image.load(path).convert_alpha()
         scaled = pygame.transform.scale(raw, (tile_size, tile_size))
         normal_sprites.append(scaled)
 
-    vulnerable_path = f"{SPRITE_DIR}/{VULNERABLE_SPRITE_FILENAME}"
+    vulnerable_path = os.path.join(
+        SPRITE_DIR, VULNERABLE_SPRITE_FILENAME
+    )
     vulnerable_raw = pygame.image.load(vulnerable_path).convert_alpha()
     vulnerable_sprite = pygame.transform.scale(
         vulnerable_raw, (tile_size, tile_size)

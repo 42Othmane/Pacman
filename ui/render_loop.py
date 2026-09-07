@@ -15,6 +15,7 @@ MLX-compatible function usage (document actual usage in README as you go):
 
 Forbidden: pygame.mixer, pygame.sprite collision helpers, joystick, network.
 """
+import os
 import sys
 from typing import Optional, cast
 
@@ -31,8 +32,14 @@ from ui.screens.pause_screen import PauseScreen
 from ui.screens.playing_screen import PlayingScreen
 from ui.screens.victory_screen import VictoryScreen
 
+from resources import resource_path
+
 FPS = 60
 WINDOW_TITLE = "Pac-Man"
+
+# Used when the game is started without a config argument, which is
+# what happens when the packaged build is launched from a desktop icon.
+DEFAULT_CONFIG_PATH = resource_path(os.path.join("config", "config.json"))
 
 # Colors (RGB) — kept here until a proper theming module exists.
 COLOR_BACKGROUND = (0, 0, 0)
@@ -56,7 +63,10 @@ class RenderLoop:
 
         self.w = width
         self.h = height
-        self.config = load_config(sys.argv[1])
+        config_path = (
+            sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
+        )
+        self.config = load_config(config_path)
 
         self.hs_file = self.config["highscore_filename"]
         self.hs_list = load_highscores(self.hs_file)
