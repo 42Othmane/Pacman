@@ -12,9 +12,9 @@ A-Maze-ing package, a persistent highscore system, four ghosts with
 a shared chase/flee behavior, and a cheat mode for peer review.
 
 The project is split between two contributors:
-- **Person A**: configuration loading, maze/collectible integration,
+- **skadaika**: configuration loading, maze/collectible integration,
   player logic, scoring, and highscore persistence.
-- **Person B**: rendering, the screen/menu system, ghost AI and
+- **ohabchi**: rendering, the screen/menu system, ghost AI and
   sprites, cheat mode, and packaging.
 
 ## Instructions
@@ -50,14 +50,54 @@ Other Makefile targets:
 | `P` / `Escape` | Pause |
 | Arrow keys + `Enter` | Navigate menus |
 
+| `F1`–`F5` | Cheat mode (see below) |
+
 See the in-game **Instructions** screen for the full, up-to-date list.
+
+### Cheat mode
+
+Cheat mode exists to let a reviewer reach and test every feature
+quickly, without having to play well. It is always available during
+gameplay, and any active cheat is listed on screen.
+
+| Key | Effect |
+|---|---|
+| `F1` | Toggle invincibility (ghosts cannot take a life) |
+| `F2` | Skip the current level |
+| `F3` | Freeze the ghosts |
+| `F4` | Add one life |
+| `F5` | Toggle a speed boost |
+
+### Packaged build
+
+A standalone build is published as an unlisted page on itch.io:
+
+**[Itch.io page](https://saumonvert.itch.io/pac42/download/Y3qLnRhtlcpIhU2y48l4ZIxWiW8bt2FROIr_MRVl)**
+
+Download the archive, extract it, and run `./run.sh` (or `./pacman`).
+The package bundles its own configuration and sprites, so no argument
+and no Python install are required. See the `README.txt` inside the
+archive for the in-package instructions.
+
+To regenerate the package from source:
+
+```console
+$> make package
+```
+
+This runs PyInstaller against `pacman.spec`, which bundles `assets/`
+and the default config alongside the executable. Paths are resolved
+at runtime by `resources.py::resource_path`, which handles both the
+development layout and PyInstaller's temporary extraction directory.
 
 ## Configuration
 
 The game is configured via a JSON file passed as the sole command
-line argument. In addition to standard JSON, lines starting with
-`#` are treated as comments and stripped before parsing (see
-`config/settings.py::_strip_comments`).
+line argument. In addition to standard JSON, three comment styles are
+stripped before parsing (see `config/settings.py::_strip_comments`):
+`#` line comments, `//` line comments, and `/* ... */` blocks. The
+stripper is a small state machine, so `#` or `//` appearing inside a
+string value are preserved rather than mistaken for comments.
 
 | Key | Meaning | Default |
 |---|---|---|
@@ -227,12 +267,10 @@ maze/              Maze representation & generation (Person A)
 game/              Game logic
 ├── player.py      Player position, movement, lives (Person A)
 ├── collectables.py  Pacgum/super-pacgum placement & consumption (A)
-├── scoring.py     Score accumulation (Person A)
-├── progression.py Standalone Game state machine, used outside the
-│                  pygame UI layer (levels, timer, win/lose) (A)
-├── ghost.py       Ghost movement, edible/eaten state (Person B)
-└── maze_adapter.py  Legacy prototype, not currently used — flagged
-                   for removal, see note in the file itself.
+└── ghost.py       Ghost movement, edible/eaten state (Person B)
+
+resources.py       Bundled-asset path resolution (dev & PyInstaller)
+pacman.spec        PyInstaller build spec
 
 highscore/         Persistent highscore storage (Person A)
 └── manager.py     Load/save/validate/add highscore entries
@@ -263,10 +301,61 @@ point between the two contributors' work: it owns the `Maze`,
 the current level, drives their per-frame updates, and renders them
 together with the HUD.
 
+**A known trade-off:** level progression, the level timer, lives and
+score all live inside `PlayingScreen` rather than in a UI-independent
+state machine. An earlier design had a separate `Game` class holding
+that state, but running it alongside `PlayingScreen` meant two copies
+of the score and the timer that could drift apart. We collapsed them
+into one owner to keep a single source of truth; the cost is that
+game-progression logic now sits in the rendering layer. Given more
+time we would invert this — have `PlayingScreen` delegate to a
+headless game object and keep only rendering and input — which would
+also make the progression logic testable without pygame.
+
+### Shared conventions
+
+Because the two halves of the project were developed in parallel, a
+few conventions were fixed up front and hold across the boundary:
+
+- **Coordinates are `(y, x)`** — row first, column second — for
+  everything that crosses between the two lots. `maze.grid[y][x]`,
+  `player.position`, `maze.spawn` and `maze.corners` all follow it.
+- **Wall booleans mean "closed"**: `cell.north is True` means there
+  is a wall to the north. `Cell.is_open(direction)` is the inverse
+  and is what movement code should use.
+- **Entities own a whole cell.** Smooth motion is a rendering
+  concern: the player exposes `prev_y`/`prev_x` and `move_progress`
+  (0.0 → 1.0) so the renderer can interpolate, but collisions and
+  gum eating always compare whole-cell integers. This keeps "did the
+  player eat this pacgum?" a yes/no question instead of a threshold.
+
 ## Project Management
 
-See [docs/project-management](docs/project-management/) for the team's
-planning, progress tracking, risk analysis, and acceptance test plan.
+The work was split into two lots of comparable size, specified in
+[docs/project-management/CAHIER_DES_CHARGES.md](docs/project-management/CAHIER_DES_CHARGES.md)
+before any code was written:
+
+- **Lot A** — configuration, maze loader, player, collectibles,
+  scoring, highscores.
+- **Lot B** — rendering, screens and menus, ghost AI, cheat mode,
+  packaging.
+
+The split was chosen so the two halves could progress in parallel
+with as few blocking dependencies as possible. The interfaces between
+them (the `Maze`/`Cell` data model, the `(y, x)` coordinate
+convention, and the whole-cell-plus-progress movement contract
+described above) were agreed first, which let Lot B build and test
+rendering against a generated maze before the player existed, and let
+Lot A test movement and collection logic without pygame.
+
+Development happened on feature branches off `develop`, merged after
+a cross-review — each of us read the other's code before it landed on
+the shared branch.
+
+See [docs/project-management](docs/project-management/) for the full
+set of artifacts: planning, progress tracking against it, risk
+analysis, team organisation, acceptance test plan, and a summary of
+the blocking points we hit.
 
 ## Resources
 
@@ -277,3 +366,28 @@ planning, progress tracking, risk analysis, and acceptance test plan.
   (used to check the MLX-equivalence of every pygame function relied
   upon — see Implementation above)
 - [Python `typing` module documentation](https://docs.python.org/3/library/typing.html)
+- [PEP 257 — Docstring conventions](https://peps.python.org/pep-0257/)
+- [PyInstaller documentation](https://pyinstaller.org/en/stable/)
+  (bundling, `sys._MEIPASS`, and the `datas` spec entry)
+- The A-Maze-ing subject, for the wall bitmask encoding
+  (bit 0 = North, 1 = East, 2 = South, 3 = West; a set bit means the
+  wall is closed)
+
+## AI Usage
+
+AI tools were used only as a support during the development of the project. **No code was written or generated by AI.**
+
+AI was mainly used for:
+
+* Understanding Python concepts and technical documentation.
+* Discussing possible approaches and solutions when facing technical problems.
+* Helping understand error messages and identify possible causes.
+* Getting ideas for testing and identifying potential edge cases.
+* Assisting with documentation.
+
+All the code in this project was written by the team. AI suggestions were reviewed critically and used only when they were understood and considered relevant to the project.
+
+
+
+
+

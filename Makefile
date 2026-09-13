@@ -4,7 +4,7 @@ VENV        := .venv
 CONFIG      ?= config/config.json
 MAIN        := main.py
 
-.PHONY: install run debug clean lint lint-strict
+.PHONY: install run debug clean lint lint-strict package
 
 install:
 	$(PIP) install --upgrade pip
@@ -26,6 +26,10 @@ lint-strict:
 	flake8 .
 	mypy . --strict
 
+package:
+	$(PIP) install pyinstaller
+	pyinstaller pacman.spec --clean --noconfirm
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf .mypy_cache .pytest_cache
+	rm -rf .mypy_cache .pytest_cache build dist
