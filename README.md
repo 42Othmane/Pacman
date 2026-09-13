@@ -72,8 +72,7 @@ gameplay, and any active cheat is listed on screen.
 
 A standalone build is published as an unlisted page on itch.io:
 
-<!-- TODO: paste the itch.io link here once the build is uploaded -->
-**<itch.io link>**
+**[Itch.io page](https://saumonvert.itch.io/pac42/download/Y3qLnRhtlcpIhU2y48l4ZIxWiW8bt2FROIr_MRVl)**
 
 Download the archive, extract it, and run `./run.sh` (or `./pacman`).
 The package bundles its own configuration and sprites, so no argument
