@@ -1,13 +1,5 @@
 # Cahier des charges — Pac-Man (projet 42, groupe de 2)
 
-Basé sur le sujet officiel v1.5. Découpage en deux lots de taille et de
-complexité équivalentes, pensés pour être développés en parallèle avec le
-moins de dépendances croisées possible. Les interfaces entre les deux lots
-sont figées dès le départ (voir "Contrats d'interface") pour éviter les
-blocages.
-
----
-
 ## Lot A — Moteur, données & progression
 *(config, maze loader, joueur, collectibles, score, progression, highscore)*
 
@@ -83,7 +75,7 @@ transitions d'écrans si testables).
 
 ---
 
-## Contrats d'interface (à valider ensemble avant de coder)
+## Contrats d'interface
 
 Pour travailler en parallèle sans se bloquer, définissez ensemble dès le
 lancement (et figez dans un fichier `game/types.py` ou équivalent) :
@@ -97,7 +89,7 @@ lancement (et figez dans un fichier `game/types.py` ou équivalent) :
 - Les événements/callbacks du cheat mode (Lot B) qui doivent pouvoir
   modifier l'état de progression (Lot A) : invincibilité, skip niveau, etc.
 
-## Travail commun (à vous deux, pas divisible proprement)
+## Travail commun
 
 - Architecture initiale (squelette de classes, découpage modules) — 1
   session ensemble avant de vous séparer sur les lots.
@@ -107,13 +99,3 @@ lancement (et figez dans un fichier `game/types.py` ou équivalent) :
 - Documents de gestion de projet dans ce dossier (planning, suivi,
   analyse de risques, tests d'acceptation, organisation d'équipe).
 - Revue de code croisée avant chaque merge sur la branche principale.
-
-## Suivi
-
-| Élément | Emplacement suggéré |
-|---|---|
-| Planning / Kanban | `docs/project-management/planning.md` ou lien Trello/GitHub Projects |
-| Suivi d'avancement vs planning | `docs/project-management/progress.md` |
-| Analyse de risques | `docs/project-management/risks.md` |
-| Organisation d'équipe | `docs/project-management/team-organization.md` |
-| Plan de tests d'acceptation | `docs/project-management/acceptance-tests.md` |
